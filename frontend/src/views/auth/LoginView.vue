@@ -56,48 +56,69 @@ const router = useRouter()
 const loading = ref(false)
 
 const form = reactive({
-  account: '',
-  password: ''
+    account: '',
+    password: ''
 })
 
 const errors = reactive({
-  account: '',
-  password: ''
+    account: '',
+    password: ''
 })
 
 // 逻辑保留自原始代码 [cite: 14, 15]
 function validate() {
-  errors.account = ''
-  errors.password = ''
-  if (!form.account) {
-    errors.account = '请输入学号或手机号'
-  } else if (!isAccount(form.account)) {
-    errors.account = '账号格式不正确'
-  }
-  if (!form.password) {
-    errors.password = '请输入密码'
-  } else if (!isPassword(form.password)) {
-    errors.password = '密码长度需为6-18位'
-  }
-  return !errors.account && !errors.password
+    errors.account = ''
+    errors.password = ''
+    if (!form.account) {
+        errors.account = '请输入学号或手机号'
+    } else if (!isAccount(form.account)) {
+        errors.account = '账号格式不正确'
+    }
+    if (!form.password) {
+        errors.password = '请输入密码'
+    } else if (!isPassword(form.password)) {
+        errors.password = '密码长度需为6-18位'
+    }
+    return !errors.account && !errors.password
 }
 
 const inputStatus = computed(() => ({
-  account: form.account ? (errors.account ? 'error' : 'success') : '',
-  password: form.password ? (errors.password ? 'error' : 'success') : ''
+    account: form.account ? (errors.account ? 'error' : 'success') : '',
+    password: form.password ? (errors.password ? 'error' : 'success') : ''
 }))
 
 async function handleLogin() {
-  if (!validate()) return
-  try {
-    loading.value = true
-    await loginApi({ account: form.account, password: form.password })
-    router.push('/home')
-  } catch (error) {
-    alert(error?.response?.data?.message || '登录失败，请检查账号或密码')
-  } finally {
-    loading.value = false
-  }
+    if (!validate()) return
+    try {
+        loading.value = true
+        //await loginApi({ account: form.account, password: form.password })
+        // 假设后端返回 role: 'student' | 'teacher'
+        //const role = res?.data?.role
+        const res = await loginApi({
+            account: form.account,
+            password: form.password
+        })
+
+        const result = res.data
+        const role = result?.data?.role
+        const token = result?.data?.token
+        const userInfo = result?.data?.userInfo
+
+        localStorage.setItem('token', token)
+        localStorage.setItem('userInfo', JSON.stringify(userInfo))
+        localStorage.setItem('role', role)
+    
+        if (role === 'teacher') {
+            alert('老师端页面暂未开发，当前仅支持学生端登录')
+            //router.push('/teacher/home') // 临时占位
+        } else {
+            router.push('/student/home')
+        }
+    } catch (error) {
+            alert(error?.response?.data?.message || '登录失败，请检查账号或密码')
+    } finally {
+            loading.value = false
+    }
 }
 </script>
 
