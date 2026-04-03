@@ -31,7 +31,7 @@ export function mockGetTeacherStudentList() {
     setTimeout(() => {
       const list = mockDb.users.map(user => ({
         id: user.id,
-        role: user.role,
+        role: user.profile.role,
         account: user.profile.account,
         name: user.profile.name,
         label: `${user.profile.account} ${user.profile.name}`

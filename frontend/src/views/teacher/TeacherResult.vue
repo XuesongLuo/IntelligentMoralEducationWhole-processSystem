@@ -125,29 +125,30 @@ watch(
   { immediate: true }
 )
 
-onMounted(() => {
+onMounted(async () => {
   //loadList()
   if (!teacherViewStore.teacherUser) {
-    teacherViewStore.restore()
-  }
-  if (!teacherViewStore.teacherUser) {
     const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
-    const mockUserList = [
-      { id: 't001', role: 'teacher', account: '#0002', name: 'DYQ', label: '#0002 DYQ' },
-      { id: 't002', role: 'teacher', account: '#0003', name: 'DYQQ', label: '#0003 DYQQ' },
-      { id: 's001', role: 'student', account: '#2164', name: '张三', label: '#2164 张三' },
-      { id: 's002', role: 'student', account: '#2166', name: '李四', label: '#2166 李四' }
-    ]
 
-    teacherViewStore.init(
-      {
-        id: localUser.id,
-        role: 'teacher',
-        account: localUser.account || localUser.username,
-        name: localUser.name
-      },
-      mockUserList
-    )
+    teacherViewStore.restore()
+    
+    const res = await getTeacherStudentList()
+    const userListFromApi = res.data?.data || []
+
+    if (!teacherViewStore.teacherUser) {
+      teacherViewStore.init(
+        {
+          id: localUser.id,
+          role: 'teacher',
+          account: localUser.account || localUser.username,
+          name: localUser.name
+        },
+        userListFromApi
+      )
+    } else {
+      teacherViewStore.userList = userListFromApi
+      teacherViewStore.persist()
+    }
   }
 })
 </script>

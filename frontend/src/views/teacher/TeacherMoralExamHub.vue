@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-//import { onMounted, onUnmounted } from 'vue'
+import { onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -28,6 +28,12 @@ import { useTeacherViewStore } from '@/stores/teacherView'
 const router = useRouter()
 const teacherViewStore = useTeacherViewStore()
 const { isViewingSelf } = storeToRefs(teacherViewStore)
+
+onMounted(() => {
+  if (!teacherViewStore.teacherUser || !teacherViewStore.selectedUser) {
+    teacherViewStore.restore()
+  }
+})
 
 function goBack() {
     router.back()
@@ -38,16 +44,9 @@ function goNotice(type) {
         ElMessage.warning('只有查看本人账号时才可进入考试页面')
         return
     }
-    router.push(`/student/exam-notice/${type}`)
+    router.push(`/teacher/exam-notice/${type}`)
 }
 
-/*
-onMounted(() => {
-  // 记录之前的状态，并强制折叠/禁用
-  teacherViewStore.sidebarCollapsed = true 
-  // 如果 Store 中有 showSidebar 属性，可设为 false 彻底从 DOM 移除
-})
-*/
 </script>
 
 <style scoped>
