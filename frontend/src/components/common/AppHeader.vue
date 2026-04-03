@@ -3,7 +3,7 @@
         <div class="left-box">
             <img v-if="logo" :src="logo" class="logo-img" alt="logo" />
             <div v-else class="logo-text">LOGO</div>
-            <span class="system-name">学生端</span>
+            <span class="system-name">{{ systemName }}</span>
         </div>
 
         <div class="right-box">
@@ -24,7 +24,11 @@ defineProps({
     logo: {
         type: String,
         default: ''
-    }
+    },
+    systemName: {
+    type: String,
+    default: '学生端'
+  }
 })
 </script>
 

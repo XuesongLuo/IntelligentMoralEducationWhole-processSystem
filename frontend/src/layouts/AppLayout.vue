@@ -3,6 +3,7 @@
         <AppHeader
             :username="userInfo.username"
             :logo="userInfo.logo"
+            :system-name="systemName"
         />
 
         <main class="app-main">
@@ -12,18 +13,25 @@
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
+import { reactive, computed, onMounted } from 'vue'
 import AppHeader from '@/components/common/AppHeader.vue'
 
 const userInfo = reactive({
   username: '',
-  logo: ''
+  logo: '',
+  role: ''
+})
+
+const systemName = computed(() => {
+  return userInfo.role === 'teacher' ? '老师端' : '学生端'
 })
 
 function loadUserInfo() {
     const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
-    userInfo.username = localUser.name || localUser.username || localUser.realName || '用户名'
+    
+    userInfo.username = localUser.name || '用户名'
     userInfo.logo = localUser.logo || ''
+    userInfo.role = localUser.role || localStorage.getItem('role') || 'student'
 }
 
 onMounted(() => {

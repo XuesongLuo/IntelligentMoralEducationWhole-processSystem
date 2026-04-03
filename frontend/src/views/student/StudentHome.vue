@@ -92,10 +92,10 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { User } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { getStudentHomeData } from '@/api/student'
+import { getUserHomeData } from '@/api/user'
 import { parseLevel } from '@/utils/level'
+import { ElMessage } from 'element-plus'
 import LevelBadge from '@/components/student/LevelBadge.vue'
 
 const router = useRouter()
@@ -141,12 +141,13 @@ function goResults() {
 }
 
 function goStudy() {
-  router.push('/student/resource-study')
+  ElMessage.info('德育资源学习页面开发中')
+  //router.push('/student/resource-study')
 }
 
 async function loadData() {
   try {
-    const res = await getStudentHomeData()
+    const res = await getUserHomeData()
     const data = res.data?.data || res.data || {}
 
     homeData.value = {
@@ -174,7 +175,10 @@ onMounted(() => {
 
 <style scoped>
 .student-page {
-  min-height: calc(100vh-64px);
+  display: flex;
+  justify-content: center; /* 居中内容 */
+  background: #f5f7fa;
+  min-height: calc(100vh - 64px);
 } 
 .content {
   width: 1200px;

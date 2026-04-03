@@ -21,7 +21,7 @@
             />
 
             <div class="auth-link-row">
-                <router-link to="/forgot-password" class="auth-link">忘记密码?</router-link>
+                <router-link to="/ResetPassword" class="auth-link">忘记密码?</router-link>
             </div>
 
             <el-button 
@@ -100,17 +100,24 @@ async function handleLogin() {
         })
 
         const result = res.data
-        const role = result?.data?.role
         const token = result?.data?.token
-        const userInfo = result?.data?.userInfo
+        const userInfo = result?.data?.userInfo || {}
+        const role = userInfo.role
 
-        localStorage.setItem('token', token)
+        if (!token) {
+            throw new Error('登录返回缺少 token')
+        }
+
+        if (!role) {
+            throw new Error('登录返回缺少 role')
+        }
+        
+        localStorage.setItem('token', token || '')
         localStorage.setItem('userInfo', JSON.stringify(userInfo))
-        localStorage.setItem('role', role)
+        localStorage.setItem('role', role || '')
     
         if (role === 'teacher') {
-            alert('老师端页面暂未开发，当前仅支持学生端登录')
-            //router.push('/teacher/home') // 临时占位
+            router.push('/teacher/home')
         } else {
             router.push('/student/home')
         }
