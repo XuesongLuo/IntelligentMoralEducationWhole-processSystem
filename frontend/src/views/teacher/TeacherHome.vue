@@ -201,30 +201,7 @@ async function loadData() {
     console.error('获取老师端首页数据失败：', error)
   }
 }
-/*
-async function loadData() {
-  try {
-    const res = await getUserHomeData()
-    const data = res.data?.data || res.data || {}
 
-    homeData.value = {
-      ...homeData.value,
-      ...data
-    }
-  } catch (error) {
-    console.error('获取学生首页数据失败：', error)
-  }
-}
-*/
-/*
-function loadLoginUser() {
-  const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
-
-  homeData.value.studentId = localUser.account || ''
-  homeData.value.studentName = localUser.name || ''
-  homeData.value.phone = localUser.phone || ''
-}
-*/
 watch(
   () => selectedUser.value,
   () => {
@@ -233,31 +210,21 @@ watch(
   { immediate: true }
 )
 
-
 onMounted(async () => {
-  //loadLoginUser()
-  //loadData()
   const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
-  
-  teacherViewStore.restore()
 
   const res = await getTeacherStudentList()
   const userListFromApi = res.data?.data || []
 
-  if (!teacherViewStore.teacherUser) {
-    teacherViewStore.init(
-      {
-        id: localUser.id,
-        role: 'teacher',
-        account: localUser.account || localUser.username,
-        name: localUser.name
-      },
-      userListFromApi
-    )
-  } else {
-    teacherViewStore.userList = userListFromApi
-    teacherViewStore.persist()
+  const currentTeacher = {
+    id: localUser.id,
+    role: 'teacher',
+    account: localUser.account || localUser.username,
+    name: localUser.name,
+    label: `${localUser.account || localUser.username} ${localUser.name}`
   }
+
+  teacherViewStore.init(currentTeacher, userListFromApi)
 })
 </script>
 

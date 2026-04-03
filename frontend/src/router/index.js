@@ -161,7 +161,8 @@ router.beforeEach((to, from, next) => {
     // 如果刷新后 store 丢了，就从 localStorage 兜底
     if (
       typeof isViewingSelf !== 'boolean' ||
-      (!teacherViewStore.teacherUser && !teacherViewStore.selectedUser)
+      !teacherViewStore.teacherUser ||
+      !teacherViewStore.selectedUser
     ) {
       const teacherViewState = JSON.parse(
         localStorage.getItem('teacherViewState') || '{}'
