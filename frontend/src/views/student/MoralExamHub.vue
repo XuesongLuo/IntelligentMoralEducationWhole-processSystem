@@ -24,7 +24,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 function goBack() {
-  router.back()
+  router.push('/student/home')
 }
 
 function goNotice(type) {

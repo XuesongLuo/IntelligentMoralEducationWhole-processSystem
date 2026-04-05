@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { getExamPaper, submitExamPaper } from '@/api/exam'
@@ -73,16 +73,101 @@ const { timeText, reset, start, stop } = useExamTimer(0, async () => {
   await handleSubmit(true)
 })
 
+// 答题缓存--用户
+const currentUser = computed(() => {
+  return JSON.parse(localStorage.getItem('userInfo') || '{}')
+})
+// 答题缓存--key
+const draftKey = computed(() => {
+  return `exam_draft_${currentUser.value.id}_${type.value}_${examId.value}`
+})
+// 时间戳
+const deadlineAt = ref(null)
+const restoredRemainingSeconds = ref(null)
+
+
+function saveDraft() {
+  const payload = {
+    examId: paperData.value.examId,
+    examType: type.value,
+    answers: { ...answerMap },
+    deadlineAt: deadlineAt.value,
+    savedAt: Date.now()
+  }
+  localStorage.setItem(draftKey.value, JSON.stringify(payload))
+}
+
+// 保存和恢复函数
+function restoreDraft(questions = []) {
+  const raw = localStorage.getItem(draftKey.value)
+  if (!raw) return
+
+  try {
+    const cache = JSON.parse(raw)
+    const cachedAnswers = cache.answers || {}
+
+    questions.forEach(q => {
+      if (cachedAnswers[q.id] !== undefined) {
+        answerMap[q.id] = cachedAnswers[q.id]
+      }
+    })
+    if (cache.deadlineAt) {
+      deadlineAt.value = cache.deadlineAt
+      restoredRemainingSeconds.value = Math.max(
+        0,
+        Math.floor((cache.deadlineAt - Date.now()) / 1000)
+      )
+    }
+  } catch (error) {
+    console.error('恢复答题草稿失败：', error)
+  }
+}
+// 清除缓存函数
+function clearDraft() {
+  localStorage.removeItem(draftKey.value)
+}
+// 设置题目默认答案
+function buildDefaultAnswer(q) {
+  if (q.type === 'multiple') return []
+  if (q.type === 'judge') return null
+  return ''
+}
 function initAnswers(questions = []) {
   questions.forEach(q => {
-    if (q.type === 'multiple') {
-      answerMap[q.id] = []
-    } else if (q.type === 'judge') {
-      answerMap[q.id] = null
-    } else {
-      answerMap[q.id] = ''
+    if (!(q.id in answerMap)) {
+      answerMap[q.id] = buildDefaultAnswer(q)
     }
   })
+}
+
+// 加载试卷
+async function loadPaper() {
+  loading.value = true
+  restoredRemainingSeconds.value = null
+  try {
+    const res = await getExamPaper(type.value, examId.value)
+    paperData.value = res.data
+
+    restoreDraft(paperData.value.questions || [])
+    initAnswers(paperData.value.questions || [])
+
+    if (restoredRemainingSeconds.value !== null) {
+      if (restoredRemainingSeconds.value <= 0) {
+        ElMessage.warning('考试时间已结束，系统将自动提交。')
+        await handleSubmit(true)
+        return
+      }
+      reset(restoredRemainingSeconds.value)
+    } else {
+      const totalSeconds = paperData.value.durationSeconds || 3600
+      deadlineAt.value = Date.now() + totalSeconds * 1000
+      reset(totalSeconds)
+      saveDraft()
+    }
+    start()
+  } finally {
+    loading.value = false
+  }
 }
 
 function validateAnswers() {
@@ -105,7 +190,7 @@ function validateAnswers() {
   }
   return ''
 }
-
+// 试卷提交函数
 async function handleSubmit(force) {
   if (!force) {
     const errorText = validateAnswers()
@@ -113,7 +198,6 @@ async function handleSubmit(force) {
       ElMessage.error(errorText)
       return
     }
-
     try {
       await ElMessageBox.confirm('确认提交当前答卷吗？提交后不可修改。', '提交确认', {
         type: 'warning'
@@ -136,29 +220,39 @@ async function handleSubmit(force) {
     }
 
     await submitExamPaper(payload)
+    clearDraft()
     stop()
     ElMessage.success(force ? '已自动提交' : '提交成功')
-    router.push(`${routePrefix.value}/moral-exam`)
+    router.replace(`${routePrefix.value}/moral-exam`)
   } finally {
     loading.value = false
   }
+}
+// 离开页面前提示用户
+function handleBeforeUnload(event) {
+  const hasDraft = !!localStorage.getItem(draftKey.value)
+  if (!hasDraft) return
+  event.preventDefault()
+  event.returnValue = ''
 }
 
-async function loadPaper() {
-  loading.value = true
-  try {
-    const res = await getExamPaper(type.value, examId.value)
-    paperData.value = res.data
-    initAnswers(paperData.value.questions || [])
-    reset(paperData.value.durationSeconds || 3600)
-    start()
-  } finally {
-    loading.value = false
-  }
-}
+watch(
+  answerMap,
+  () => {
+    if (!paperData.value.examId) return
+    saveDraft()
+  },
+  { deep: true }
+)
 
 onMounted(() => {
   loadPaper()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  stop()
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 

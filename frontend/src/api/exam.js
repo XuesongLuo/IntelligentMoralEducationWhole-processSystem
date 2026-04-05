@@ -78,13 +78,14 @@ export function getExamResultList(params) {
 }
 
 // 单次结果详情
-export function getExamResultDetail(resultId) {
+export function getExamResultDetail(resultId, userId) {
   if (USE_MOCK) {
-    return mockGetExamResultDetail(resultId)
+    return mockGetExamResultDetail(resultId, userId)
   }
 
   return request({
     url: `${getRolePrefix()}/exam/results/${resultId}`,
-    method: 'get'
+    method: 'get',
+    params: userId ? { userId } : {}
   })
 }

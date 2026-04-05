@@ -45,7 +45,6 @@ export const useTeacherViewStore = defineStore('teacherView', {
 
     selectUser(user) {
       this.selectedUser = user
-      this.sidebarCollapsed = true
       this.persist()
     },
 

@@ -104,7 +104,7 @@ export function mockSubmitExamPaper(payload) {
 
 export function mockGetExamResultList(params = {}) {
   const currentUser = getCurrentUser()
-  const userId = currentUser.id
+  const userId = params.userId || currentUser.id
   const pageNum = Number(params.pageNum || 1)
   const pageSize = Number(params.pageSize || 10)
 
@@ -118,10 +118,10 @@ export function mockGetExamResultList(params = {}) {
   })
 }
 
-export function mockGetExamResultDetail(resultId) {
+export function mockGetExamResultDetail(resultId, userId) {
   const currentUser = getCurrentUser()
-  const userId = currentUser.id
-  const detail = mockDb.examResultDetails[userId]?.[resultId]
+  const targetUserId = userId || currentUser.id
+  const detail = mockDb.examResultDetails[targetUserId]?.[resultId]
 
   return createDelay(
     detail || {

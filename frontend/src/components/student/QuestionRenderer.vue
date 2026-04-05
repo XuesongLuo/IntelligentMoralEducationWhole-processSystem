@@ -11,7 +11,7 @@
           <el-radio
             v-for="opt in question.options"
             :key="opt.value"
-            :label="opt.value"
+            :value="opt.value"
           >
             {{ opt.label }}
           </el-radio>
@@ -23,7 +23,7 @@
           <el-checkbox
             v-for="opt in question.options"
             :key="opt.value"
-            :label="opt.value"
+            :value="opt.value"
           >
             {{ opt.label }}
           </el-checkbox>
@@ -32,8 +32,8 @@
 
       <template v-else-if="question.type === 'judge'">
         <el-radio-group v-model="localValue">
-          <el-radio :label="true">对</el-radio>
-          <el-radio :label="false">错</el-radio>
+          <el-radio :value="true">对</el-radio>
+          <el-radio :value="false">错</el-radio>
         </el-radio-group>
       </template>
 

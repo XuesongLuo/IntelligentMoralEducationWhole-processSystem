@@ -54,6 +54,7 @@
     <ResultDetailDialog
       v-model="dialogVisible"
       :result-id="currentResultId"
+      :user-id="selectedUser?.id"
     />
   </div>
 </template>
@@ -62,6 +63,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { getTeacherStudentList } from '@/api/user'
 import { useTeacherViewStore } from '@/stores/teacherView'
 import { getExamResultList } from '@/api/exam'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'

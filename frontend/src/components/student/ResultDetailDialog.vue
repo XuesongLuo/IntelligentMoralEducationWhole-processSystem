@@ -82,6 +82,10 @@ const props = defineProps({
   resultId: {
     type: [String, Number],
     default: ''
+  },
+  userId: {
+    type: [String, Number],
+    default: ''
   }
 })
 
@@ -116,7 +120,7 @@ async function loadDetail() {
   if (!props.resultId || !props.modelValue) return
   loading.value = true
   try {
-    const res = await getExamResultDetail(props.resultId)
+    const res = await getExamResultDetail(props.resultId, props.userId)
     detail.value = res.data
   } finally {
     loading.value = false
@@ -124,7 +128,7 @@ async function loadDetail() {
 }
 
 watch(
-  () => [props.modelValue, props.resultId],
+  () => [props.modelValue, props.resultId, props.userId],
   () => {
     loadDetail()
   },

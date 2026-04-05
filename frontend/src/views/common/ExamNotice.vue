@@ -59,7 +59,7 @@ const pageTitle = computed(() => {
 })
 
 function goBack() {
-  router.back()
+  router.push(`${routePrefix.value}/moral-exam`)
 }
 
 async function loadData() {

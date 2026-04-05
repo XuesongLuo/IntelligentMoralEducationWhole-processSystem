@@ -36,7 +36,7 @@ onMounted(() => {
 })
 
 function goBack() {
-    router.back()
+    router.push('/teacher/home')
 }
 
 function goNotice(type) {
