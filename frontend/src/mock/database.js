@@ -130,7 +130,7 @@ export const mockDb = {
                 totalScore: 91
             }
             ],
-            s002: [
+        s002: [
             {
                 id: 'r003',
                 type: 'questionnaire',
@@ -140,5 +140,152 @@ export const mockDb = {
                 totalScore: 74
             }
         ]
+    },
+
+    examNotices: {
+        survey: [
+            '本问卷所有题目均为必答题。',
+            '答题开始后请勿刷新或关闭浏览器。',
+            '倒计时结束后系统将自动提交。',
+            '提交前请再次确认所有内容。'
+        ],
+        integrity: [
+            '本考核所有题目均为必答题。',
+            '考试过程中请独立完成，不要刷新页面。',
+            '倒计时结束系统将自动提交。',
+            '提交后答案不可修改。'
+        ]
+    },
+
+    examEntryMap: {
+        survey: {
+            examId: 'survey-001',
+            paperName: '德育画像构建测试问卷'
+        },
+        integrity: {
+            examId: 'integrity-001',
+            paperName: '科研诚信考核测试卷'
+        }
+    },
+
+    examPaperMap: {
+        'survey-001': {
+            examId: 'survey-001',
+            paperName: '德育画像构建测试问卷',
+            durationSeconds: 5400,
+            questions: [
+                {
+                    id: 'sq1',
+                    type: 'single',
+                    title: '当你在团队合作中遇到意见分歧时，通常会怎么做？',
+                    options: [
+                    { label: '坚持自己观点', value: 'A' },
+                    { label: '主动沟通协调', value: 'B' },
+                    { label: '选择沉默', value: 'C' },
+                    { label: '交给别人处理', value: 'D' }
+                    ]
+                },
+                {
+                    id: 'sq2',
+                    type: 'multiple',
+                    title: '你认为医学生应具备哪些核心品质？',
+                    options: [
+                    { label: '责任心', value: 'A' },
+                    { label: '同理心', value: 'B' },
+                    { label: '合作意识', value: 'C' },
+                    { label: '诚信意识', value: 'D' }
+                    ]
+                },
+                {
+                    id: 'sq3',
+                    type: 'judge',
+                    title: '在面对患者情绪激动时，先安抚情绪再解释问题是合理的做法。'
+                },
+                {
+                    id: 'sq4',
+                    type: 'blank',
+                    title: '请填写你认为医学职业最重要的一项价值。'
+                },
+                {
+                    id: 'sq5',
+                    type: 'essay',
+                    title: '请简要描述一次你在学习或生活中体现责任担当的经历。'
+                }
+            ]
+        },
+
+        'integrity-001': {
+            examId: 'integrity-001',
+            paperName: '科研诚信考核测试卷',
+            durationSeconds: 7200,
+            questions: [
+                {
+                    id: 'iq1',
+                    type: 'single',
+                    title: '发现实验数据与预期不一致时，最合适的做法是：',
+                    options: [
+                    { label: '修改数据使其更好看', value: 'A' },
+                    { label: '删除异常数据不记录', value: 'B' },
+                    { label: '如实记录并分析原因', value: 'C' },
+                    { label: '等待老师决定是否保留', value: 'D' }
+                    ]
+                },
+                {
+                    id: 'iq2',
+                    type: 'multiple',
+                    title: '以下哪些行为属于科研不端风险？',
+                    options: [
+                    { label: '伪造数据', value: 'A' },
+                    { label: '篡改实验结果', value: 'B' },
+                    { label: '规范引用他人成果', value: 'C' },
+                    { label: '一稿多投', value: 'D' }
+                    ]
+                },
+                {
+                    id: 'iq3',
+                    type: 'judge',
+                    title: '只要论文结论正确，适当美化过程数据也是可以接受的。'
+                },
+                {
+                    id: 'iq4',
+                    type: 'blank',
+                    title: '请填写你理解的“科研诚信”关键词。'
+                },
+                {
+                    id: 'iq5',
+                    type: 'essay',
+                    title: '请简要说明你会如何处理导师要求“优化”实验结果的情况。'
+                }
+            ]
+        }
+    },
+
+    examResultDetails: {
+        s001: {
+            r001: {
+            id: 'r001',
+            paperName: '德育画像构建测试问卷',
+            studentNo: '20260001',
+            realName: '张三',
+            submitTime: '2026-04-01 14:20:00',
+            durationMinutes: 18,
+            answerList: [
+                { questionId: 'sq1', questionTitle: '当你在团队合作中遇到意见分歧时，通常会怎么做？', answer: 'B' },
+                { questionId: 'sq2', questionTitle: '你认为医学生应具备哪些核心品质？', answer: ['A', 'B', 'D'] }
+            ],
+            aiAnalysis: {
+                dimensions: [
+                { dimension: '科研诚信薄弱型', score: 80, reason: '基本具备规范意识。' },
+                { dimension: '医患沟通焦虑型', score: 76, reason: '沟通表达尚可，但应对高压场景仍需训练。' },
+                { dimension: '职业认同模糊型', score: 83, reason: '职业目标较清晰。' },
+                { dimension: '人文关怀缺失型', score: 85, reason: '能体现一定的人文关怀意识。' },
+                { dimension: '综合发展均衡型', score: 82, reason: '整体发展较均衡。' }
+                ],
+                summary: '建议继续加强压力场景下的沟通表达与科研规范训练。'
+            }
+            }
+        },
+        s002: {},
+        t001: {}
     }
 }

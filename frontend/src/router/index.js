@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import Register from '@/views/auth/LoginView.vue'
 import Login from '@/views/auth/LoginView.vue'
+import Register from '@/views/auth/RegisterView.vue'
 import ForgotPassword from '@/views/auth/ForgotPasswordView.vue'
 
 import AppLayout from '@/layouts/AppLayout.vue'

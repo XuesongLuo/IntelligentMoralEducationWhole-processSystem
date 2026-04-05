@@ -45,6 +45,16 @@ const type = computed(() => route.params.type)
 const examId = computed(() => route.params.examId)
 const loading = ref(false)
 
+const currentRole = computed(() => {
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  return userInfo.role || 'student'
+})
+
+const routePrefix = computed(() => {
+  return currentRole.value === 'teacher' ? '/teacher' : '/student'
+})
+
+
 const paperData = ref({
   examId: '',
   paperName: '',
@@ -128,7 +138,7 @@ async function handleSubmit(force) {
     await submitExamPaper(payload)
     stop()
     ElMessage.success(force ? '已自动提交' : '提交成功')
-    router.push('/student/moral-exam')
+    router.push(`${routePrefix.value}/moral-exam`)
   } finally {
     loading.value = false
   }
@@ -154,11 +164,10 @@ onMounted(() => {
 
 <style scoped>
 .page-wrap {
-  min-height: 100vh;
   background: #f5f7fa;
 }
 .main-box {
-  width: 1100px;
+  width: 1200px;
   margin: 30px auto;
 }
 .title-row {

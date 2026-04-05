@@ -44,6 +44,16 @@ const type = computed(() => route.params.type)
 const examInfo = ref({})
 const noticeList = ref([])
 
+const currentRole = computed(() => {
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  return userInfo.role || 'student'
+})
+
+const routePrefix = computed(() => {
+  return currentRole.value === 'teacher' ? '/teacher' : '/student'
+})
+
+
 const pageTitle = computed(() => {
   return type.value === 'survey' ? '画像构建' : '诚信考核'
 })
@@ -62,7 +72,7 @@ async function loadData() {
 }
 
 function startExam() {
-  router.push(`/student/exam-paper/${type.value}/${examInfo.value.examId}`)
+  router.push(`${routePrefix.value}/exam-paper/${type.value}/${examInfo.value.examId}`)
 }
 
 onMounted(() => {
