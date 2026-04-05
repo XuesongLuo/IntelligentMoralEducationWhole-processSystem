@@ -59,6 +59,7 @@
           <div class="right-panel">
             <h3>思政课程成绩与提升</h3>
             <div class="score-list">
+              
               <div
                 v-for="item in radarScores"
                 :key="item.label"
@@ -69,18 +70,10 @@
               </div>
             </div>
 
-            <div class="radar-fake">
-              <div class="radar-item" v-for="dim in homeData.scoreDimensions" :key="dim.key">
-                <div class="dim-name">{{ dim.name }}</div>
-                <div class="dim-bar">
-                  <div class="best" :style="{ width: dim.best + '%' }"></div>
-                  <div class="worst" :style="{ width: dim.worst + '%' }"></div>
-                </div>
-                <div class="dim-text">{{ dim.best }}/{{ dim.worst }}</div>
-              </div>
-            </div>
+            <div ref="radarChartRef" class="radar-chart"></div>
           </div>
         </div>
+
       </el-card>
 
       <el-card class="nav-card" shadow="never">
@@ -106,10 +99,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { storeToRefs } from 'pinia'
+import * as echarts from 'echarts'
 import { getUserHomeData, getTeacherStudentList } from '@/api/user'
 import { parseLevel } from '@/utils/level'
 import { useTeacherViewStore } from '@/stores/teacherView'
@@ -120,6 +114,8 @@ const router = useRouter()
 const teacherViewStore = useTeacherViewStore()
 const { sidebarCollapsed, selectedUser, userList, isViewingSelf } = storeToRefs(teacherViewStore)
 
+const radarChartRef = ref(null)
+let radarChartInstance = null
 
 const homeData = ref({
   studentId: '',
@@ -139,11 +135,129 @@ const levelInfo = computed(() => parseLevel(homeData.value.levelValue || 0))
 const radarScores = computed(() => {
   const list = homeData.value.scoreDimensions || []
   if (!list.length) return []
-  return [
-    { label: '最好成绩', color: '#409eff' },
-    { label: '最低成绩', color: '#e6a23c' }
-  ]
+
+  const hasWorst = list.some(item => item.worst !== undefined && item.worst !== null)
+  return hasWorst
+    ? [
+        { label: '最好成绩', color: '#409eff' },
+        { label: '最低成绩', color: '#e6a23c' }
+      ]
+    : [
+        { label: '最好成绩', color: '#409eff' }
+      ]
 })
+
+const radarIndicators = computed(() => {
+  return (homeData.value.scoreDimensions || []).map(item => ({
+    name: item.name,
+    max: 100
+  }))
+})
+
+const bestScoreValues = computed(() => {
+  return (homeData.value.scoreDimensions || []).map(item => Number(item.best || 0))
+})
+
+const worstScoreValues = computed(() => {
+  return (homeData.value.scoreDimensions || []).map(item => {
+    if (item.worst === undefined || item.worst === null) {
+      return Number(item.best || 0)
+    }
+    return Number(item.worst || 0)
+  })
+})
+
+function renderRadarChart() {
+  if (!radarChartRef.value) return
+  if (!radarIndicators.value.length) return
+
+  if (!radarChartInstance) {
+    radarChartInstance = echarts.init(radarChartRef.value)
+  }
+
+  const hasWorst = (homeData.value.scoreDimensions || []).some(
+    item => item.worst !== undefined && item.worst !== null
+  )
+
+  const seriesData = [
+    {
+      value: bestScoreValues.value,
+      name: '最好成绩',
+      areaStyle: {
+        opacity: 0.18
+      },
+      lineStyle: {
+        width: 2,
+        color: '#409eff'
+      },
+      itemStyle: {
+        color: '#409eff'
+      },
+      symbolSize: 6
+    }
+  ]
+  if (hasWorst) {
+    seriesData.push({
+      value: worstScoreValues.value,
+      name: '最低成绩',
+      areaStyle: {
+        opacity: 0.15
+      },
+      lineStyle: {
+        width: 2,
+        color: '#e6a23c'
+      },
+      itemStyle: {
+        color: '#e6a23c'
+      },
+      symbolSize: 6
+    })
+  }
+
+  radarChartInstance.setOption({
+    tooltip: {
+      trigger: 'item'
+    },
+    legend: {
+      show: false
+    },
+    radar: {
+      radius: '62%',
+      center: ['50%', '55%'],
+      indicator: radarIndicators.value,
+      splitNumber: 5,
+      axisName: {
+        color: '#333',
+        fontSize: 14
+      },
+      splitArea: {
+        areaStyle: {
+          color: ['#fff']
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#dcdfe6'
+        }
+      },
+      axisLine: {
+        lineStyle: {
+          color: '#dcdfe6'
+        }
+      }
+    },
+    series: [
+      {
+        type: 'radar',
+        data: seriesData
+      }
+    ]
+  })
+}
+
+function resizeRadarChart() {
+  radarChartInstance?.resize()
+}
 
 function getProgressColor(val) {
   if (val >= 80) return '#22c55e'
@@ -199,6 +313,9 @@ async function loadData() {
       ...localData
     }
     console.error('获取老师端首页数据失败：', error)
+
+    await nextTick()
+    renderRadarChart()
   }
 }
 
@@ -208,6 +325,15 @@ watch(
     loadData()
   },
   { immediate: true }
+)
+
+watch(
+  () => homeData.value.scoreDimensions,
+  async () => {
+    await nextTick()
+    renderRadarChart()
+  },
+  { deep: true }
 )
 
 onMounted(async () => {
@@ -225,7 +351,16 @@ onMounted(async () => {
   }
 
   teacherViewStore.init(currentTeacher, userListFromApi)
+
+  window.addEventListener('resize', resizeRadarChart)
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resizeRadarChart)
+  radarChartInstance?.dispose()
+  radarChartInstance = null
+})
+
 </script>
 
 <style scoped>
@@ -307,40 +442,11 @@ onMounted(async () => {
   height: 12px;
   border-radius: 50%;
 }
-.radar-fake {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.radar-chart {
+  width: 100%;
+  height: 300px;
 }
-.radar-item {
-  display: grid;
-  grid-template-columns: 90px 1fr 70px;
-  gap: 10px;
-  align-items: center;
-}
-.dim-bar {
-  position: relative;
-  height: 12px;
-  background: #ebeef5;
-  border-radius: 999px;
-  overflow: hidden;
-}
-.dim-bar .best {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 12px;
-  background: #409eff;
-  opacity: 0.9;
-}
-.dim-bar .worst {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 12px;
-  background: #e6a23c;
-  opacity: 0.7;
-}
+
 .nav-actions {
   min-height: 240px;
   display: flex;

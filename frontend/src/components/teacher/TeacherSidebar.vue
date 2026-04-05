@@ -1,7 +1,9 @@
 <template>
   <aside class="teacher-sidebar" :class="{ collapsed }">
     <template v-if="!collapsed">
-      <div class="sidebar-header">管理员查看菜单</div>
+      <div class="sidebar-header">
+        <span>管理员查看菜单</span>
+      </div>
 
       <div class="sidebar-group">
         <div class="group-title">老师列表</div>
@@ -27,6 +29,12 @@
         >
           {{ item.label }}
         </div>
+      </div>
+    </template>
+
+    <template v-else>
+      <div class="collapsed-content">
+        <span class="vertical-text">用户菜单栏</span>
       </div>
     </template>
 
@@ -70,32 +78,56 @@ const studentList = computed(() =>
 
 <style scoped>
 .teacher-sidebar {
-    position: fixed;
-    left: 0;
-    top: 64px; /* 避开 AppHeader 的高度 */
-    bottom: 0;
-    z-index: 2000; /* 确保在最上层 */
+  position: fixed;
+  left: 0;
+  top: 64px; /* 避开 AppHeader 的高度 */
+  bottom: 0;
+  z-index: 2000; /* 确保在最上层 */
 
-    width: 260px;
-    background: #fff;
-    border-right: 1px solid #e5e7eb;
-    box-shadow: 4px 0 12px rgba(0,0,0,0.05); /* 添加阴影增加悬浮感 */
-    transition: transform 0.3s ease, width 0.3s ease;
+  width: 260px;
+  background: #fff;
+  border-right: 1px solid #b3b3b3;
+  border-top: 1px solid #b3b3b3;
+  border-bottom: 1px solid #b3b3b3;
+  box-shadow: 4px 0 12px rgba(0,0,0,0.05); /* 添加阴影增加悬浮感 */
+  transition: transform 0.5s ease, width 0.5s ease;
 
-    /*min-height: calc(100vh - 64px); */
-
+  display: flex;
+  flex-direction: column;
 }
 
 .teacher-sidebar.collapsed {
-    transform: translateX(-220px);
-    /*width: 40px; */
+  /*transform: translateX(-220px);*/
+  background: #bbbbbb;
+  border-right: 1px solid #999999;
+  border-top: 1px solid #999999;
+  border-bottom: 1px solid #999999;
+  width: 40px; 
 }
 
 .sidebar-header {
   padding: 18px;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+
+/* 缩进后的垂直文字容器 */
+.collapsed-content {
+  flex: 1;
+  display: flex;
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
+}
+
+/* 垂直文字样式 [对应图片：老师端侧边栏缩小--主页.jpg] */
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 30px;
+  font-size: 20px;
+  color: #333;
 }
 
 .sidebar-group {
@@ -105,12 +137,13 @@ const studentList = computed(() =>
 .group-title {
   padding: 8px 18px;
   color: #666;
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .sidebar-item {
   padding: 12px 18px;
   cursor: pointer;
+  font-size: 16px;
 }
 
 .sidebar-item:hover {
@@ -124,17 +157,18 @@ const studentList = computed(() =>
 
 .toggle-btn {
   position: absolute;
-  right: -16px;
+  right: -19px;
   top: 50%;
   transform: translateY(-50%);
   width: 16px;
   height: 120px;
-  background: #cfcfcf;
-  border-radius: 0 10px 10px 0;
+  background: #fff;
+  border-radius: 0 25px 25px 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 2px 0 4px rgba(0,0,0,0.05);
+  border: rgb(226, 226, 226) solid 1px;
+  box-shadow: 3px 0 4px rgba(0,0,0,0.25);
 }
 </style>

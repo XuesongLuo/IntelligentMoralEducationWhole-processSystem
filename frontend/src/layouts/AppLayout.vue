@@ -44,8 +44,4 @@ onMounted(() => {
     min-height: 100vh;
     background: #f5f7fa;
 }
-
-.app-main {
-    min-height: calc(100vh - 64px);
-}
 </style>

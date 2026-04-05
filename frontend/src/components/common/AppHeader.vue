@@ -36,7 +36,7 @@ defineProps({
 .app-header {
     height: 64px;
     background: #fff;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #999999;
     padding: 0 24px;
     display: flex;
     align-items: center;

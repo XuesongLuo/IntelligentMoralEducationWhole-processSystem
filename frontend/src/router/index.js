@@ -1,16 +1,26 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useTeacherViewStore } from '@/stores/teacherView'
+
+import Register from '@/views/auth/LoginView.vue'
+import Login from '@/views/auth/LoginView.vue'
+import ForgotPassword from '@/views/auth/ForgotPasswordView.vue'
+
 import AppLayout from '@/layouts/AppLayout.vue'
+
+import ExamNotice from '@/views/common/ExamNotice.vue'
+import ExamPaper from '@/views/common/ExamPaper.vue'
 
 import StudentHome from '@/views/student/StudentHome.vue'
 import MoralExamHub from '@/views/student/MoralExamHub.vue'
-import ExamNotice from '@/views/student/ExamNotice.vue'
-import ExamPaper from '@/views/student/ExamPaper.vue'
 import ResultList from '@/views/student/ResultList.vue'
 
 import TeacherHome from '@/views/teacher/TeacherHome.vue'
 import TeacherMoralExamHub from '@/views/teacher/TeacherMoralExamHub.vue'
 import TeacherResult from '@/views/teacher/TeacherResult.vue'
+
+
+
+import { useTeacherViewStore } from '@/stores/teacherView'
+
 
 const routes = [
   {
@@ -20,19 +30,19 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/auth/LoginView.vue'),
+    component: Login,
     meta: { public: true }
   },
   {
     path: '/register',
     name: 'Register',
-    component: () => import('@/views/auth/RegisterView.vue'),
+    component: Register,
     meta: { public: true }
   },
   {
     path: '/ResetPassword',
     name: 'ResetPassword',
-    component: () => import('@/views/auth/ForgotPasswordView.vue'),
+    component: ForgotPassword,
     meta: { public: true }
   },
 
