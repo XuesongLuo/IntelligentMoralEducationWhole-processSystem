@@ -17,7 +17,11 @@ from app.schemas.common import ResponseModel
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
+    LoginResponseModel,
+    RegisterResponse,
+    RegisterResponseModel,
     UserInfo,
+    UserInfoResponseModel,
     StudentRegisterRequest,
     TeacherRegisterRequest,
 )
@@ -25,18 +29,18 @@ from app.schemas.auth import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def build_user_info(user: AuthUser) -> dict:
+def build_user_info(user: AuthUser) -> UserInfo:
     student_no = user.student_profile.student_no if user.student_profile else None
     teacher_no = user.teacher_profile.teacher_no if user.teacher_profile else None
 
-    return {
-        "id": user.id,
-        "real_name": user.real_name,
-        "role": user.role,
-        "student_no": student_no,
-        "teacher_no": teacher_no,
-        "phone": user.phone,
-    }
+    return UserInfo(
+        id=user.id,
+        real_name=user.real_name,
+        role=user.role,
+        student_no=student_no,
+        teacher_no=teacher_no,
+        phone=user.phone,
+    )
 
 
 # 登录
@@ -76,13 +80,13 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
     token = create_access_token(subject=str(user.id))
 
-    return ResponseModel(
-        data={
-            "token": token,
-            "token_type": "bearer",
-            "user_info": build_user_info(user),
-        }
+    data = LoginResponse(
+        token=token,
+        token_type="bearer",
+        user_info=build_user_info(user),
     )
+
+    return LoginResponseModel(data=data)
 
 # 学生注册
 @router.post("/register/student", response_model=ResponseModel)
@@ -123,20 +127,15 @@ def register_student(payload: StudentRegisterRequest, db: Session = Depends(get_
 
     # 4. 直接签发 token
     token = create_access_token(subject=str(auth_user.id))
-    return ResponseModel(
-        data={
-            "token": token,
-            "token_type": "bearer",
-            "user_info": {
-                "id": auth_user.id,
-                "real_name": auth_user.real_name,
-                "role": auth_user.role,
-                "student_no": student_user.student_no,
-                "teacher_no": None,
-                "phone": auth_user.phone,
-            }
-        },
-        message="学生注册成功"
+    data = RegisterResponse(
+        token=token,
+        token_type="bearer",
+        user_info=build_user_info(auth_user, student_no=student_user.student_no),
+    )
+
+    return RegisterResponseModel(
+        data=data,
+        message="学生注册成功",
     )
 
 # 老师注册
@@ -188,24 +187,21 @@ def register_teacher(payload: TeacherRegisterRequest, db: Session = Depends(get_
     db.refresh(auth_user)
 
     token = create_access_token(subject=str(auth_user.id))
-    return ResponseModel(
-        data={
-            "token": token,
-            "token_type": "bearer",
-            "user_info": {
-                "id": auth_user.id,
-                "real_name": auth_user.real_name,
-                "role": auth_user.role,
-                "student_no": None,
-                "teacher_no": teacher_user.teacher_no,
-                "phone": auth_user.phone,
-            }
-        },
-        message="老师注册成功"
+    data = RegisterResponse(
+        token=token,
+        token_type="bearer",
+        user_info=build_user_info(auth_user, teacher_no=teacher_user.teacher_no),
+    )
+
+    return RegisterResponseModel(
+        data=data,
+        message="老师注册成功",
     )
 
 
 
 @router.get("/me", response_model=ResponseModel)
 def me(current_user: AuthUser = Depends(get_current_user)):
-    return ResponseModel(data=build_user_info(current_user))
+    return UserInfoResponseModel(
+        data=build_user_info(current_user)
+    )

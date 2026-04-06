@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 
+from app.schemas.common import ResponseModel
 
 class LoginRequest(BaseModel):
     account: str = Field(..., min_length=1, max_length=100)
@@ -39,3 +40,14 @@ class RegisterResponse(BaseModel):
     token: str
     token_type: str = "bearer"
     user_info: UserInfo
+
+class LoginResponseModel(ResponseModel):
+    data: LoginResponse
+
+
+class RegisterResponseModel(ResponseModel):
+    data: RegisterResponse
+
+
+class UserInfoResponseModel(ResponseModel):
+    data: UserInfo
