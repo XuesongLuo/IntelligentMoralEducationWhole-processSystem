@@ -161,8 +161,8 @@ async function loadData() {
 function loadLoginUser() {
   const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
 
-  homeData.value.studentId = localUser.account || ''
-  homeData.value.studentName = localUser.name || ''
+  homeData.value.studentId = localUser.student_no || ''
+  homeData.value.studentName = localUser.real_name  || ''
   homeData.value.phone = localUser.phone || ''
 }
 
