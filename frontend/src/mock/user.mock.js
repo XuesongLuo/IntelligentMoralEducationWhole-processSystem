@@ -31,10 +31,14 @@ export function mockGetTeacherStudentList() {
     setTimeout(() => {
       const list = mockDb.users.map(user => ({
         id: user.id,
-        role: user.profile.role,
-        account: user.profile.account,
-        name: user.profile.name,
-        label: `${user.profile.account} ${user.profile.name}`
+        role: user.role,
+        username: user.username,
+        real_name: user.real_name,
+        student_no: user.student_no,
+        teacher_no: user.teacher_no,
+        phone: user.phone,
+        email: user.email,
+        label: `${user.student_no || user.teacher_no || user.username}：${user.real_name}`
       }))
 
       resolve(mockResponse(list, '获取用户列表成功'))

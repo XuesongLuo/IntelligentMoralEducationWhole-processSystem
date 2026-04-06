@@ -2,112 +2,175 @@
 
 export const mockDb = {
     users: [
-        {
-            id: 's001',
-            account: '20260001',
-            password: '123456',
-            token: 'mock-token-student-001',
-            profile: {
-                id: 's001',
-                name: '张三',
-                account: '20260001',
+    {
+      id: 1,
+      username: 'zhangsan',
+      real_name: '张三',
+      role: 'student',
+      student_no: '20260001',
+      teacher_no: null,
+      phone: '13800000000',
+      email: 'zhangsan@example.com',
+      password: '123456',
+      token: 'mock-token-student-001',
+      login_accounts: ['zhangsan', '20260001', '13800000000', 'zhangsan@example.com']
+    },
+    {
+      id: 2,
+      username: 'lisi',
+      real_name: '李四',
+      role: 'student',
+      student_no: '20260002',
+      teacher_no: null,
+      phone: '13800000001',
+      email: 'lisi@example.com',
+      password: '123456',
+      token: 'mock-token-student-002',
+      login_accounts: ['lisi', '20260002', '13800000001', 'lisi@example.com']
+    },
+    {
+      id: 1001,
+      username: 'teacher_li',
+      real_name: '李老师',
+      role: 'teacher',
+      student_no: null,
+      teacher_no: 'T2020007',
+      phone: '13900000000',
+      email: 'teacherli@example.com',
+      password: '123456',
+      token: 'mock-token-teacher-001',
+      login_accounts: ['teacher_li', 'T2020007', '13900000000', 'teacherli@example.com']
+    }
+  ],
+
+    userHomeMap: {
+        1: {
+            user: {
+                id: 1,
+                username: 'zhangsan',
+                real_name: '张三',
                 role: 'student',
-                phone: '13800000000',
-                logo: ''
+                student_no: '20260001',
+                teacher_no: null
+            },
+            level: {
+                level_value: 8,
+                level_display: '1月3星',
+                level_icon_type: 'moon',
+                ai_usage_seconds: 45380,
+                ai_usage_text: '12:36:20'
+            },
+            learning_stats: {
+                simulation_completion_rate: 76.0,
+                remaining_resources: 7,
+                categories: [
+                {
+                    category_code: 'doctor_patient_dispute',
+                    category_name: '医患纠纷处理',
+                    completed_count: 8,
+                    total_count: 10,
+                    completion_rate: 80.0
+                },
+                {
+                    category_code: 'research_fraud',
+                    category_name: '科研数据造假诱惑',
+                    completed_count: 13,
+                    total_count: 20,
+                    completion_rate: 65.0
+                },
+                {
+                    category_code: 'medical_fairness',
+                    category_name: '医疗资源分配公平性',
+                    completed_count: 11,
+                    total_count: 12,
+                    completion_rate: 91.7
+                }
+                ]
+            },
+            score_comparison: {
+                best_result: {
+                label: '最高成绩',
+                dimensions: [
+                    { key: 'a', name: '理想信念', score: 88 },
+                    { key: 'b', name: '责任担当', score: 90 },
+                    { key: 'c', name: '纪律意识', score: 84 },
+                    { key: 'd', name: '诚信意识', score: 93 },
+                    { key: 'e', name: '集体观念', score: 86 }
+                ]
+                },
+                worst_result: {
+                label: '最低成绩',
+                dimensions: [
+                    { key: 'a', name: '理想信念', score: 72 },
+                    { key: 'b', name: '责任担当', score: 70 },
+                    { key: 'c', name: '纪律意识', score: 68 },
+                    { key: 'd', name: '诚信意识', score: 75 },
+                    { key: 'e', name: '集体观念', score: 73 }
+                ]
+                }
             }
         },
-        {
-            id: 's002',
-            account: '20260002',
-            password: '123456',
-            token: 'mock-token-student-002',
-            profile: {
-                id: 's002',
-                name: '李四',
-                account: '20260002',
+
+        2: {
+            user: {
+                id: 2,
+                username: 'lisi',
+                real_name: '李四',
                 role: 'student',
-                phone: '13800000001',
-                logo: ''
+                student_no: '20260002',
+                teacher_no: null
+            },
+            level: {
+                level_value: 5,
+                level_display: '5星',
+                level_icon_type: 'star',
+                ai_usage_seconds: 22365,
+                ai_usage_text: '06:12:45'
+            },
+            learning_stats: {
+                simulation_completion_rate: 58.0,
+                remaining_resources: 14,
+                categories: [
+                {
+                    category_code: 'doctor_patient_dispute',
+                    category_name: '医患纠纷处理',
+                    completed_count: 5,
+                    total_count: 10,
+                    completion_rate: 50.0
+                }
+                ]
+            },
+            score_comparison: {
+                best_result: null,
+                worst_result: null
             }
         },
-        {
-            id: 't001',
-            account: '2020007',
-            password: '123456',
-            token: 'mock-token-teacher-001',
-            profile: {
-                id: 't001',
-                name: '李老师',
-                account: '2020007',
+
+        1001: {
+            user: {
+                id: 1001,
+                username: 'teacher_li',
+                real_name: '李老师',
                 role: 'teacher',
-                phone: '13900000000',
-                logo: ''
+                student_no: null,
+                teacher_no: 'T2020007'
+            },
+            level: {
+                level_value: 5,
+                level_display: '5星',
+                level_icon_type: 'star',
+                ai_usage_seconds: 22365,
+                ai_usage_text: '06:12:45'
+            },
+            learning_stats: {
+                simulation_completion_rate: 58.0,
+                remaining_resources: 14,
+                categories: []
+            },
+            score_comparison: {
+                best_result: null,
+                worst_result: null
             }
-        }
-    ],
-
-    UserHomeMap: {
-        s001: {
-            studentId: '20260001',
-            studentName: '张三',
-            phone: '13800000000',
-            levelValue: 8,
-            aiUsageDuration: '12时36分20秒',
-            simulationCompletion: 76,
-            studyProgressList: [
-                { id: 1, name: '思想理论', progress: 80, leftCount: 2 },
-                { id: 2, name: '党史学习', progress: 65, leftCount: 4 },
-                { id: 3, name: '法治教育', progress: 92, leftCount: 1 }
-            ],
-            scoreDimensions: [
-                { key: 'a', name: '理想信念', best: 88, worst: 72 },
-                { key: 'b', name: '责任担当', best: 90, worst: 70 },
-                { key: 'c', name: '纪律意识', best: 84, worst: 68 },
-                { key: 'd', name: '诚信意识', best: 93, worst: 75 },
-                { key: 'e', name: '集体观念', best: 86, worst: 73 }
-            ]
-        },
-
-        s002: {
-            studentId: '20260002',
-            studentName: '李四',
-            phone: '13800000001',
-            levelValue: 5,
-            aiUsageDuration: '6时12分45秒',
-            simulationCompletion: 58,
-            studyProgressList: [
-                { id: 1, name: '思想理论', progress: 52, leftCount: 5 },
-                { id: 2, name: '党史学习', progress: 60, leftCount: 3 },
-                { id: 3, name: '法治教育', progress: 48, leftCount: 6 }
-            ],
-            scoreDimensions: [
-                { key: 'a', name: '理想信念', best: 76, worst: 65 },
-                { key: 'b', name: '责任担当', best: 70, worst: 62 },
-                { key: 'c', name: '纪律意识', best: 81, worst: 69 },
-                { key: 'd', name: '诚信意识', best: 78, worst: 66 },
-                { key: 'e', name: '集体观念', best: 74, worst: 63 }
-            ]
-        },
-            t001: {
-            studentId: '2020007',
-            studentName: '李老师',
-            phone: '13900000000',
-            levelValue: 5,
-            aiUsageDuration: '6时12分45秒',
-            simulationCompletion: 58,
-            studyProgressList: [
-                { id: 1, name: '思想理论', progress: 52, leftCount: 5 },
-                { id: 2, name: '党史学习', progress: 60, leftCount: 3 },
-                { id: 3, name: '法治教育', progress: 48, leftCount: 6 }
-            ],
-            scoreDimensions: [
-                { key: 'a', name: '理想信念', best: 76, worst: 65 },
-                { key: 'b', name: '责任担当', best: 70, worst: 62 },
-                { key: 'c', name: '纪律意识', best: 81, worst: 69 },
-                { key: 'd', name: '诚信意识', best: 78, worst: 66 },
-                { key: 'e', name: '集体观念', best: 74, worst: 63 }
-            ]
-
         }
     },
 

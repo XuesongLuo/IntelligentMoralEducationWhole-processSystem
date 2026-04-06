@@ -91,23 +91,26 @@ async function handleLogin() {
     if (!validate()) return
     try {
         loading.value = true
-        //await loginApi({ account: form.account, password: form.password })
-        // 假设后端返回 role: 'student' | 'teacher'
-        //const role = res?.data?.role
+
         const res = await loginApi({
             account: form.account,
             password: form.password
         })
 
-        const result = res.data
-        const token = result?.data?.token
-        const userInfo = result?.data?.userInfo || {}
-        const role = userInfo.role
+       // 统一约定：loginApi 返回的就是后端 response.data
+        // 即：{ code, message, data }
+        const bizData = res?.data || {}
+
+        const token = bizData.token
+        const userInfo = bizData.user_info
+        const role = userInfo?.role
 
         if (!token) {
             throw new Error('登录返回缺少 token')
         }
-
+        if (!userInfo) {
+            throw new Error('登录返回缺少 user_info')
+        }
         if (!role) {
             throw new Error('登录返回缺少 role')
         }
@@ -116,13 +119,13 @@ async function handleLogin() {
         localStorage.setItem('userInfo', JSON.stringify(userInfo))
         localStorage.setItem('role', role || '')
     
-        if (role === 'teacher') {
-            router.push('/teacher/home')
-        } else {
-            router.push('/student/home')
-        }
+        router.push(role === 'teacher' ? '/teacher/home' : '/student/home')
     } catch (error) {
-            alert(error?.response?.data?.message || '登录失败，请检查账号或密码')
+            alert(
+                error?.response?.data?.message ||
+                error?.message ||
+                '登录失败，请检查账号或密码'
+            )
     } finally {
             loading.value = false
     }

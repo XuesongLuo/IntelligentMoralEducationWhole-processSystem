@@ -21,14 +21,13 @@ function mockError(message = '请求失败', code = 400) {
   })
 }
 
-export function mockLogin(data) {
+export function mockLogin(payload) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      const user = mockDb.users.find(
-        item =>
-          item.account === data.account &&
-          item.password === data.password
-      )
+      const user = mockDb.users.find(item => {
+        return item.login_accounts.includes(payload.account) &&
+          item.password === payload.password
+      })
 
       if (!user) {
         reject({
@@ -43,10 +42,24 @@ export function mockLogin(data) {
       }
 
       resolve(
-        mockResponse({
-          token: user.token,
-          userInfo: user.profile
-        }, '登录成功')
+        mockResponse(
+          {
+            token: user.token,
+            token_type: 'bearer',
+            user_info: {
+              id: user.id,
+              username: user.username,
+              real_name: user.real_name,
+              role: user.role,
+              student_no: user.student_no,
+              teacher_no: user.teacher_no,
+              phone: user.phone,
+              email: user.email
+            }
+          },
+          '登录成功',
+          0
+        )
       )
     }, 300)
   })
