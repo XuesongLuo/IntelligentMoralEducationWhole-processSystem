@@ -3,9 +3,12 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from datetime import datetime
+import random
+import re
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.redis import get_redis
 from app.core.config import get_settings
 from app.core.security import create_access_token, verify_password, get_password_hash
 from app.models.auth_user import AuthUser
@@ -20,14 +23,17 @@ from app.schemas.auth import (
     LoginResponseModel,
     RegisterResponse,
     RegisterResponseModel,
-    UserInfo,
-    UserInfoResponseModel,
+    SendSmsCodeRequest,
+    SendSmsCodeResponse,
+    SendSmsCodeResponseModel,
     StudentRegisterRequest,
     TeacherRegisterRequest,
+    UserInfo,
+    UserInfoResponseModel
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
+redis_client = get_redis()
 
 def build_user_info(user: AuthUser) -> UserInfo:
     student_no = user.student_profile.student_no if user.student_profile else None
@@ -40,6 +46,66 @@ def build_user_info(user: AuthUser) -> UserInfo:
         student_no=student_no,
         teacher_no=teacher_no,
         phone=user.phone,
+    )
+
+def validate_phone(phone: str) -> bool:
+    return bool(re.fullmatch(r"^1[3-9]\d{9}$", phone))
+
+
+def sms_code_key(phone: str) -> str:
+    return f"auth:sms_code:{phone}"
+
+
+def sms_cooldown_key(phone: str) -> str:
+    return f"auth:sms_cooldown:{phone}"
+
+
+def generate_sms_code() -> str:
+    return f"{random.randint(0, 999999):06d}"
+
+
+def verify_sms_code(phone: str, sms_code: str):
+    cached_code = redis_client.get(sms_code_key(phone))
+    if not cached_code:
+        raise HTTPException(status_code=400, detail="验证码已过期或不存在")
+    if cached_code != sms_code:
+        raise HTTPException(status_code=400, detail="验证码错误")
+    redis_client.delete(sms_code_key(phone))
+
+# 短信验证
+@router.post("/send-code", response_model=ResponseModel)
+def send_sms_code(payload: SendSmsCodeRequest):
+    settings = get_settings()
+
+    if not validate_phone(payload.phone):
+        raise HTTPException(status_code=400, detail="手机号格式不正确")
+
+    if redis_client.get(sms_cooldown_key(payload.phone)):
+        raise HTTPException(status_code=400, detail="验证码发送过于频繁，请稍后再试")
+
+    code = generate_sms_code()
+
+    redis_client.setex(
+        sms_code_key(payload.phone),
+        settings.SMS_CODE_EXPIRE_SECONDS,
+        code,
+    )
+    redis_client.setex(
+        sms_cooldown_key(payload.phone),
+        settings.SMS_SEND_INTERVAL_SECONDS,
+        "1",
+    )
+
+    # 开发环境先走 mock
+    debug_code = code if settings.SMS_MODE == "mock" else None
+    print(f"[SMS MOCK] phone={payload.phone}, code={code}")
+
+    return SendSmsCodeResponseModel(
+        message="验证码发送成功",
+        data=SendSmsCodeResponse(
+            expire_seconds=settings.SMS_CODE_EXPIRE_SECONDS,
+            debug_code=debug_code,
+        ),
     )
 
 
@@ -91,6 +157,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 # 学生注册
 @router.post("/register/student", response_model=ResponseModel)
 def register_student(payload: StudentRegisterRequest, db: Session = Depends(get_db)):
+    # 0. 验证码判断
+    verify_sms_code(payload.phone, payload.sms_code)
     # 1. 是否已注册
     phone_exists = db.query(AuthUser).filter(AuthUser.phone == payload.phone).first()
     student_exists = db.query(StudentUser).filter(StudentUser.student_no == payload.student_no).first()
@@ -142,6 +210,7 @@ def register_student(payload: StudentRegisterRequest, db: Session = Depends(get_
 @router.post("/register/teacher", response_model=ResponseModel)
 def register_teacher(payload: TeacherRegisterRequest, db: Session = Depends(get_db)):
     settings = get_settings()
+    verify_sms_code(payload.phone, payload.sms_code)
     if payload.invite_code != settings.TEACHER_INVITE_CODE:
         raise HTTPException(status_code=400, detail="教师邀请码错误")
     """

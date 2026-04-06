@@ -12,6 +12,7 @@ class StudentRegisterRequest(BaseModel):
     real_name: str = Field(..., min_length=1, max_length=50)
     phone: str = Field(..., min_length=1, max_length=20)
     password: str = Field(..., min_length=6, max_length=100)
+    sms_code: str = Field(..., min_length=4, max_length=10)
 
 
 class TeacherRegisterRequest(BaseModel):
@@ -20,6 +21,16 @@ class TeacherRegisterRequest(BaseModel):
     phone: str = Field(..., min_length=1, max_length=20)
     password: str = Field(..., min_length=6, max_length=100)
     invite_code: str = Field(..., min_length=1, max_length=100)
+    sms_code: str = Field(..., min_length=4, max_length=10)
+
+
+class SendSmsCodeRequest(BaseModel):
+    phone: str = Field(..., min_length=11, max_length=20)
+
+
+class SendSmsCodeResponse(BaseModel):
+    expire_seconds: int
+    debug_code: str | None = None
 
 
 class UserInfo(BaseModel):
@@ -40,6 +51,9 @@ class RegisterResponse(BaseModel):
     token: str
     token_type: str = "bearer"
     user_info: UserInfo
+
+class SendSmsCodeResponseModel(ResponseModel):
+    data: SendSmsCodeResponse
 
 class LoginResponseModel(ResponseModel):
     data: LoginResponse

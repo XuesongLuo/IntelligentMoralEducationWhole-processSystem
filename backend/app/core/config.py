@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
 
+    SMS_MODE: str = "mock"   # mock / real
+    SMS_CODE_EXPIRE_SECONDS: int = 300
+    SMS_SEND_INTERVAL_SECONDS: int = 60
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         return (

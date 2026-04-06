@@ -49,7 +49,7 @@
                 v-model="form.smsCode"
                 icon="✉"
                 placeholder="输入手机验证码"
-                action-text="获取验证码"
+                :action-text="smsActionText"
                 :status="status.smsCode"
                 :error-message="errors.smsCode"
                 @action="handleSendCode"
@@ -103,7 +103,7 @@
 
 <script setup>
 /* 逻辑部分保持不变，确保功能完整性 */
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
 import AuthInput from '@/components/auth/AuthInput.vue'
@@ -113,6 +113,10 @@ import { isInviteCode, isPassword, isPhone, isRealName, isSmsCode, isStudentOrWo
 
 const router = useRouter()
 const loading = ref(false)
+
+const sendingCode = ref(false)
+const countdown = ref(0)
+let timer = null
 
 const form = reactive({
     student_no: '',
@@ -171,6 +175,14 @@ const currentNo = computed({
   }
 })
 
+
+const smsActionText = computed(() => {
+  if (sendingCode.value) return '发送中...'
+  if (countdown.value > 0) return `${countdown.value}s后重试`
+  return '获取验证码'
+})
+
+
 function validate() {
     Object.keys(errors).forEach(key => errors[key] = '')
     const currentNo = form.role === 'student' ? form.student_no : form.teacher_no
@@ -206,7 +218,22 @@ function validate() {
     return Object.values(errors).every(item => !item)
 }
 
+// 短信验证码按钮点击计时
+function startCountdown(seconds = 60) {
+  countdown.value = seconds
+  timer && clearInterval(timer)
+  timer = setInterval(() => {
+    countdown.value -= 1
+    if (countdown.value <= 0) {
+      clearInterval(timer)
+      timer = null
+    }
+  }, 1000)
+}
+
 async function handleSendCode() {
+    if (sendingCode.value || countdown.value > 0) return
+
     if (!form.phone) {
         errors.phone = '请输入手机号'
         return
@@ -217,10 +244,19 @@ async function handleSendCode() {
         return
     }
     try {
-        await sendSmsCodeApi({ phone: form.phone })
-        alert('验证码发送成功')
+        sendingCode.value = true
+        const res = await sendSmsCodeApi({ phone: form.phone })
+        const bizData = res?.data || {}
+        if (bizData?.debug_code) {
+            alert(`验证码发送成功（开发模式）：${bizData.debug_code}`)
+        } else {
+            alert('验证码发送成功，请注意查收短信')
+        }
+        startCountdown(60)
     } catch (error) {
         alert(error?.response?.data?.detail || error?.response?.data?.message || '验证码发送失败')
+    } finally {
+        sendingCode.value = false
     }
 }
 
@@ -235,12 +271,14 @@ async function handleRegister() {
                     real_name: form.real_name,
                     phone: form.phone,
                     password: form.password,
-                    invite_code: form.invite_code
+                    invite_code: form.invite_code,
+                    sms_code: form.smsCode
                 } : {
                     student_no: form.student_no,
                     real_name: form.real_name,
                     phone: form.phone,
-                    password: form.password
+                    password: form.password,
+                    sms_code: form.smsCode
                 }
 
         const res = 
@@ -285,6 +323,10 @@ watch(
     }
   }
 )
+
+onBeforeUnmount(() => {
+  timer && clearInterval(timer)
+})
 
 </script>
 

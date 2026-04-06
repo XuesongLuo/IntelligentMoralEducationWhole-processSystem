@@ -1,3 +1,4 @@
+"""
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Enum, String
@@ -25,3 +26,4 @@ class User(Base):
         onupdate=datetime.utcnow,
         nullable=False,
     )
+"""
