@@ -67,7 +67,7 @@ import { getTeacherStudentList } from '@/api/user'
 import { useTeacherViewStore } from '@/stores/teacherView'
 import { getExamResultList } from '@/api/exam'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
-import ResultDetailDialog from '@/components/student/ResultDetailDialog.vue'
+import ResultDetailDialog from '@/components/common/ResultDetailDialog.vue'
 
 
 const router = useRouter()

@@ -53,7 +53,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getExamResultList } from '@/api/exam'
-import ResultDetailDialog from '@/components/student/ResultDetailDialog.vue'
+import ResultDetailDialog from '@/components/common/ResultDetailDialog.vue'
 
 const router = useRouter()
 

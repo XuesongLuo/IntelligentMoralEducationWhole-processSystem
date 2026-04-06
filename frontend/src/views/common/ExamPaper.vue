@@ -36,7 +36,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { getExamPaper, submitExamPaper } from '@/api/exam'
 import { useExamTimer } from '@/composables/useExamTimer'
-import QuestionRenderer from '@/components/student/QuestionRenderer.vue'
+import QuestionRenderer from '@/components/common/QuestionRenderer.vue'
 
 const route = useRoute()
 const router = useRouter()

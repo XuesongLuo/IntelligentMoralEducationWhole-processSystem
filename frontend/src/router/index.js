@@ -10,12 +10,12 @@ import ExamNotice from '@/views/common/ExamNotice.vue'
 import ExamPaper from '@/views/common/ExamPaper.vue'
 
 import StudentHome from '@/views/student/StudentHome.vue'
-import MoralExamHub from '@/views/student/MoralExamHub.vue'
-import ResultList from '@/views/student/ResultList.vue'
+import StudentMoralExamHub from '@/views/student/StudentMoralExamHub.vue'
+import StudentResult from '@/views/student/StudentResultList.vue'
 
 import TeacherHome from '@/views/teacher/TeacherHome.vue'
 import TeacherMoralExamHub from '@/views/teacher/TeacherMoralExamHub.vue'
-import TeacherResult from '@/views/teacher/TeacherResult.vue'
+import TeacherResult from '@/views/teacher/TeacherResultList.vue'
 
 
 
@@ -60,7 +60,7 @@ const routes = [
       {
         path: 'moral-exam',
         name: 'StudentMoralExamHub',
-        component: MoralExamHub
+        component: StudentMoralExamHub
       },
       {
         path: 'exam-notice/:type',
@@ -77,7 +77,7 @@ const routes = [
       {
         path: 'results',
         name: 'StudentResults',
-        component: ResultList
+        component: StudentResult
       }
     ]
   },

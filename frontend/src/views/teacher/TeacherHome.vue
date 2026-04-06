@@ -107,7 +107,7 @@ import * as echarts from 'echarts'
 import { getUserHomeData, getTeacherStudentList } from '@/api/user'
 import { parseLevel } from '@/utils/level'
 import { useTeacherViewStore } from '@/stores/teacherView'
-import LevelBadge from '@/components/student/LevelBadge.vue'
+import LevelBadge from '@/components/common/LevelBadge.vue'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
 
 const router = useRouter()

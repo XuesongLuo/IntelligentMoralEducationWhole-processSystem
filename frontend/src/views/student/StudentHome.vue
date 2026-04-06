@@ -96,7 +96,7 @@ import { useRouter } from 'vue-router'
 import { getUserHomeData } from '@/api/user'
 import { parseLevel } from '@/utils/level'
 import { ElMessage } from 'element-plus'
-import LevelBadge from '@/components/student/LevelBadge.vue'
+import LevelBadge from '@/components/common/LevelBadge.vue'
 
 const router = useRouter()
 
