@@ -19,8 +19,8 @@ def get_dashboard_overview(current_user: User = Depends(get_current_user)):
         "user": {
             "id": current_user.id,
             "real_name": current_user.real_name,
-            "student_no": current_user.student_no,
-            "teacher_no": current_user.teacher_no,
+            "student_no": current_user.student_profile.student_no if current_user.student_profile else None,
+            "teacher_no": current_user.teacher_profile.teacher_no if current_user.teacher_profile else None,
             "role": current_user.role,
         },
         "level": {

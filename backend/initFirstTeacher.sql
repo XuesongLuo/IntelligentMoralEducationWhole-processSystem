@@ -1,7 +1,6 @@
 INSERT INTO users (
     teacher_no,
     phone,
-    email,
     password_hash,
     real_name,
     role,

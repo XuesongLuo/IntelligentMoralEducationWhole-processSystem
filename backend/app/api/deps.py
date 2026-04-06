@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import parse_token_subject
-from app.models.user import User
+from app.models.auth_user import AuthUser
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -13,7 +13,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
-) -> User:
+) -> AuthUser:
     subject = parse_token_subject(token)
     if not subject:
         raise HTTPException(
@@ -21,16 +21,7 @@ def get_current_user(
             detail="无效或过期的登录凭证",
         )
 
-    user = (
-        db.query(User)
-        .filter(
-            or_(
-                User.id == int(subject) if subject.isdigit() else False,
-                User.username == subject,
-            )
-        )
-        .first()
-    )
+    user = db.query(AuthUser).filter(AuthUser.id == int(subject)).first()
 
     if not user or not user.is_active:
         raise HTTPException(
