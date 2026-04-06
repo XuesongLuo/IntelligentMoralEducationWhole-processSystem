@@ -115,9 +115,16 @@ const router = useRouter()
 const loading = ref(false)
 
 const form = reactive({
-    username: '', password: '', confirmPassword: '',
-    realName: '', phone: '', smsCode: '',
-    inviteCode: '', role: 'student', agree: false
+    studentNo: '',
+    teacherNo: '',
+    password: '',
+    confirmPassword: '',
+    realName: '',
+    phone: '',
+    smsCode: '',
+    inviteCode: '',
+    role: 'student',
+    agree: false
 })
 
 const errors = reactive({

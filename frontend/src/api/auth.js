@@ -20,7 +20,7 @@ export function loginApi(data) {
     data
   })
 }
-
+/*
 export function registerApi(data) {
   if (USE_MOCK) {
     return mockRegister(data)
@@ -28,6 +28,30 @@ export function registerApi(data) {
 
   return request({
     url: '/auth/register', 
+    method: 'post',
+    data
+  })
+}
+*/
+export function registerStudentApi(data) {
+  if (USE_MOCK) {
+    return mockRegisterStudent(data)
+  }
+
+  return request({
+    url: '/auth/register/student',
+    method: 'post',
+    data
+  })
+}
+
+export function registerTeacherApi(data) {
+  if (USE_MOCK) {
+    return mockRegisterTeacher(data)
+  }
+
+  return request({
+    url: '/auth/register/teacher',
     method: 'post',
     data
   })
