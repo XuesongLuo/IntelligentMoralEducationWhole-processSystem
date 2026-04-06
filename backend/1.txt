@@ -1,0 +1,13 @@
+An environment file is configured but terminal environment injection is disabled. Enable "python.terminal.useEnvFile" to use environment variables from .env files in terminals.
+
+
+启动当前项目下的虚拟环境：
+Windows:
+.venv\Scripts\activate
+
+MacOS/Linux:
+source .venv/bin/activate
+
+
+启动:
+uvicorn app.main:app --reload
