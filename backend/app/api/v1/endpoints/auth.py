@@ -130,7 +130,7 @@ def register_student(payload: StudentRegisterRequest, db: Session = Depends(get_
     data = RegisterResponse(
         token=token,
         token_type="bearer",
-        user_info=build_user_info(auth_user, student_no=student_user.student_no),
+        user_info=build_user_info(auth_user),
     )
 
     return RegisterResponseModel(
@@ -190,7 +190,7 @@ def register_teacher(payload: TeacherRegisterRequest, db: Session = Depends(get_
     data = RegisterResponse(
         token=token,
         token_type="bearer",
-        user_info=build_user_info(auth_user, teacher_no=teacher_user.teacher_no),
+        user_info=build_user_info(auth_user),
     )
 
     return RegisterResponseModel(
