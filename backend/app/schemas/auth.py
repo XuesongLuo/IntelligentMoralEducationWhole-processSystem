@@ -8,13 +8,11 @@ class LoginRequest(BaseModel):
 
 class UserInfo(BaseModel):
     id: int
-    username: str
     real_name: str
     role: str
     student_no: str | None = None
     teacher_no: str | None = None
     phone: str | None = None
-    email: str | None = None
 
 
 class LoginResponse(BaseModel):

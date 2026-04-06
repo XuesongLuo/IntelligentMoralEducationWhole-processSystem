@@ -18,11 +18,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         db.query(User)
         .filter(
             or_(
-                User.username == payload.account,
                 User.student_no == payload.account,
                 User.teacher_no == payload.account,
                 User.phone == payload.account,
-                User.email == payload.account,
             )
         )
         .first()
@@ -52,13 +50,11 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         token=token,
         user_info=UserInfo(
             id=user.id,
-            username=user.username,
             real_name=user.real_name,
             role=user.role,
             student_no=user.student_no,
             teacher_no=user.teacher_no,
             phone=user.phone,
-            email=user.email,
         ),
     )
 

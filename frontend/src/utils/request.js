@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // 创建 axios 实例
 const request = axios.create({
-  baseURL: '/api',
+  baseURL: '/api/v1',
   timeout: 10000
 })
 
@@ -23,13 +23,8 @@ request.interceptors.request.use(
 
 // 响应拦截器
 request.interceptors.response.use(
-  response => {
-    // 这里按你的后端返回结构决定怎么写
-    // 如果后端直接返回数据，可以 return response.data
-    return response.data
-  },
+  response => response.data,
   error => {
-    // 统一处理错误
     if (error.response) {
       const status = error.response.status
 
