@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.core.database import Base, engine
 from app.core.redis import redis_client
 from app.models.user import User  # noqa: F401
-from app.models.student_registry import StudentRegistry  # noqa: F401
+from backend.app.models.student_roster import StudentRegistry  # noqa: F401
 from app.models.teacher_invite import TeacherInvite  # noqa: F401
 
 settings = get_settings()

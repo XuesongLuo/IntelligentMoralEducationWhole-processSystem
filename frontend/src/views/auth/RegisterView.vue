@@ -4,11 +4,11 @@
 
         <form class="auth-form" @submit.prevent="handleRegister">
             <AuthInput
-                v-model="form.username"
+                v-model="currentNo"
                 icon="◉"
-                placeholder="设置用户名"
-                :status="status.username"
-                :error-message="errors.username"
+                :placeholder="form.role === 'student' ? '请输入学号' : '请输入工号'"
+                :status="status.no"
+                :error-message="errors.no"
             />
 
             <AuthInput
@@ -30,11 +30,11 @@
             />
 
             <AuthInput
-                v-model="form.realName"
+                v-model="form.real_name"
                 icon="🪪"
                 placeholder="姓名验证，务必输入真实姓名"
-                :status="status.realName"
-                :error-message="errors.realName"
+                :status="status.real_name"
+                :error-message="errors.real_name"
             />
 
             <AuthInput
@@ -71,11 +71,11 @@
                 <div v-if="form.role === 'teacher'" class="dynamic-input-container">
                     <div class="dynamic-input-wrapper">
                         <AuthInput
-                            v-model="form.inviteCode"
+                            v-model="form.invite_code"
                             icon="🎟️"
                             placeholder="请输入教师专属邀请码 (必填)"
-                            :status="status.inviteCode"
-                            :error-message="errors.inviteCode"
+                            :status="status.invite_code"
+                            :error-message="errors.invite_code"
                         />
                     </div>
                 </div>
@@ -103,74 +103,189 @@
 
 <script setup>
 /* 逻辑部分保持不变，确保功能完整性 */
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
 import AuthInput from '@/components/auth/AuthInput.vue'
 import AuthSwitch from '@/components/auth/AuthSwitch.vue'
-import { registerApi, sendSmsCodeApi } from '@/api/auth'
+import { registerStudentApi, registerTeacherApi, sendSmsCodeApi } from '@/api/auth'
 import { isInviteCode, isPassword, isPhone, isRealName, isSmsCode, isStudentOrWorkNo } from '@/utils/validators'
 
 const router = useRouter()
 const loading = ref(false)
 
 const form = reactive({
-    studentNo: '',
-    teacherNo: '',
+    student_no: '',
+    teacher_no: '',
     password: '',
     confirmPassword: '',
-    realName: '',
+    real_name: '',
     phone: '',
     smsCode: '',
-    inviteCode: '',
+    invite_code: '',
     role: 'student',
     agree: false
 })
 
 const errors = reactive({
-    username: '', password: '', confirmPassword: '',
-    realName: '', phone: '', smsCode: '',
-    inviteCode: '', agree: ''
+    no: '',
+    password: '',
+    confirmPassword: '',
+    real_name: '',
+    phone: '',
+    smsCode: '',
+    invite_code: '',
+    agree: ''
+})
+
+
+const status = computed(() => {
+    const currentNo = form.role === 'student' ? form.student_no : form.teacher_no
+
+    return {
+        no: currentNo ? (errors.no ? 'error' : 'success') : '',
+        password: form.password ? (errors.password ? 'error' : 'success') : '',
+        confirmPassword: form.confirmPassword
+            ? (errors.confirmPassword ? 'error' : 'success')
+            : '',
+        real_name: form.real_name ? (errors.real_name ? 'error' : 'success') : '',
+        phone: form.phone ? (errors.phone ? 'error' : 'success') : '',
+        smsCode: form.smsCode ? (errors.smsCode ? 'error' : 'success') : '',
+        invite_code:
+            form.role === 'teacher' && form.invite_code
+                ? (errors.invite_code ? 'error' : 'success')
+                : ''
+    }
+})
+
+const currentNo = computed({
+  get() {
+    return form.role === 'student' ? form.student_no : form.teacher_no
+  },
+  set(value) {
+    if (form.role === 'student') {
+      form.student_no = value
+    } else {
+      form.teacher_no = value
+    }
+  }
 })
 
 function validate() {
     Object.keys(errors).forEach(key => errors[key] = '')
-    if (!form.username) errors.username = '请输入学号/工号'
-    else if (!isStudentOrWorkNo(form.username)) errors.username = '学号/工号格式不正确'
+    const currentNo = form.role === 'student' ? form.student_no : form.teacher_no
+
+    if (!currentNo) {
+        errors.no = form.role === 'student' ? '请输入学号' : '请输入工号'
+    } else if (!isStudentOrWorkNo(currentNo)) {
+        errors.no = form.role === 'student' ? '学号格式不正确' : '工号格式不正确'
+    }
     if (!form.password) errors.password = '请输入密码'
     else if (!isPassword(form.password)) errors.password = '密码长度需为6-18位'
+
     if (form.confirmPassword !== form.password) errors.confirmPassword = '两次输入密码不一致'
-    if (!form.realName) errors.realName = '请输入真实姓名'
-    if (!form.phone) errors.phone = '请输入手机号'
+
+    if (!form.real_name) errors.real_name = '请输入真实姓名'
+
+    if (!form.phone) {
+        errors.phone = '请输入手机号'
+    } else if (!isPhone(form.phone)) {
+        errors.phone = '手机号格式不正确'
+    }
+
     if (!form.smsCode) errors.smsCode = '请输入验证码'
-    if (form.role === 'teacher' && !form.inviteCode) errors.inviteCode = '老师账号必须输入邀请码'
+
+    if (form.role === 'teacher') {
+        if (!form.invite_code) {
+            errors.invite_code = '老师账号必须输入邀请码'
+        } else if (!isInviteCode(form.invite_code)) {
+            errors.invite_code = '邀请码格式不正确'
+        }
+    }
     if (!form.agree) { alert('请先勾选服务条款'); return false }
     return Object.values(errors).every(item => !item)
 }
 
-const status = computed(() => ({
-    username: form.username ? (errors.username ? 'error' : 'success') : '',
-    password: form.password ? (errors.password ? 'error' : 'success') : '',
-    confirmPassword: form.confirmPassword ? (errors.confirmPassword ? 'error' : 'success') : '',
-    realName: form.realName ? (errors.realName ? 'error' : 'success') : '',
-    phone: form.phone ? (errors.phone ? 'error' : 'success') : '',
-    smsCode: form.smsCode ? (errors.smsCode ? 'error' : 'success') : '',
-    inviteCode: form.inviteCode ? (errors.inviteCode ? 'error' : 'success') : ''
-}))
+async function handleSendCode() {
+    if (!form.phone) {
+        errors.phone = '请输入手机号'
+        return
+    }
 
-async function handleSendCode() { /* 发送逻辑... */ }
+    if (!isPhone(form.phone)) {
+        errors.phone = '手机号格式不正确'
+        return
+    }
+    try {
+        await sendSmsCodeApi({ phone: form.phone })
+        alert('验证码发送成功')
+    } catch (error) {
+        alert(error?.response?.data?.detail || error?.response?.data?.message || '验证码发送失败')
+    }
+}
+
+
 async function handleRegister() { 
     if (!validate()) return
     try {
         loading.value = true
-        await registerApi({ ...form })
-        router.push('/home')
+        const payload =
+            form.role === 'teacher' ? {
+                    teacher_no: form.teacher_no,
+                    real_name: form.real_name,
+                    phone: form.phone,
+                    password: form.password,
+                    invite_code: form.invite_code
+                } : {
+                    student_no: form.student_no,
+                    real_name: form.real_name,
+                    phone: form.phone,
+                    password: form.password
+                }
+
+        const res = 
+            form.role === 'teacher'
+                ? await registerTeacherApi(payload)
+                : await registerStudentApi(payload)
+        
+        const bizData = res?.data || {}
+        const token = bizData.token
+        const userInfo = bizData.user_info
+
+        if (!token) {
+            throw new Error('注册返回缺少 token')
+        }
+        if (!userInfo || !userInfo.role) {
+            throw new Error('注册返回缺少用户信息')
+        }
+
+        localStorage.setItem('token', token)
+        localStorage.setItem('userInfo', JSON.stringify(userInfo))
+        localStorage.setItem('role', userInfo.role)
+
+        router.push(userInfo.role === 'teacher' ? '/teacher/home' : '/student/home')
     } catch (error) {
-        alert(error?.response?.data?.message || '注册失败')
+        alert(error?.response?.data?.detail || error?.response?.data?.message || '注册失败')
     } finally {
         loading.value = false
     }
 }
+
+watch(
+  () => form.role,
+  (role) => {
+    errors.no = ''
+    errors.invite_code = ''
+
+    if (role === 'student') {
+      form.teacher_no = ''
+      form.invite_code = ''
+    } else {
+      form.student_no = ''
+    }
+  }
+)
+
 </script>
 
 <style scoped>

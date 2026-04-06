@@ -34,3 +34,8 @@ class LoginResponse(BaseModel):
     token: str
     token_type: str = "bearer"
     user_info: UserInfo
+
+class RegisterResponse(BaseModel):
+    token: str
+    token_type: str = "bearer"
+    user_info: UserInfo

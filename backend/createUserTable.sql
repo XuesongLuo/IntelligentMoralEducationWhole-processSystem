@@ -1,10 +1,8 @@
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(50) NOT NULL UNIQUE,
     student_no VARCHAR(50) NULL UNIQUE,
     teacher_no VARCHAR(50) NULL UNIQUE,
     phone VARCHAR(20) NULL UNIQUE,
-    email VARCHAR(100) NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     real_name VARCHAR(50) NOT NULL,
     role ENUM('student', 'teacher') NOT NULL,

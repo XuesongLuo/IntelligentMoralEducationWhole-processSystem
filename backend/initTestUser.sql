@@ -1,6 +1,5 @@
 INSERT INTO users (
-    username,
-    student_no,
+    teacher_no,
     phone,
     email,
     password_hash,
@@ -9,13 +8,11 @@ INSERT INTO users (
     teacher_invite_verified,
     is_active
 ) VALUES (
-    'student001',
-    '20230001',
-    '13800000001',
-    'student001@example.com',
-    '$2b$12$6PMdqsGgMH3ySHVPjjaBdOiDn4scKaZuk2TMMpEcqMQaqXFXBCtjy',
-    '张三',
-    'student',
-    0,
+    'T2026001',
+    '13800000099',
+    '$2b$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    '系统管理员',
+    'teacher',
+    1,
     1
 );

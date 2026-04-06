@@ -11,7 +11,7 @@ from app.schemas.common import ResponseModel
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-
+# 登录
 @router.post("/login", response_model=ResponseModel)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = (
@@ -60,17 +60,119 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
     return ResponseModel(data=data)
 
+# 学生注册
+@router.post("/register/student", response_model=ResponseModel)
+def register_student(payload: StudentRegisterRequest, db: Session = Depends(get_db)):
+    # 1. 是否已注册
+    existed = db.query(User).filter(
+        or_(
+            User.student_no == payload.student_no,
+            User.phone == payload.phone
+        )
+    ).first()
+    if existed:
+        raise HTTPException(status_code=400, detail="学号或手机号已注册")
+
+    # 2. 名单库强校验：姓名 + 学号
+    roster = db.query(StudentRoster).filter(
+        StudentRoster.student_no == payload.student_no,
+        StudentRoster.real_name == payload.real_name,
+        StudentRoster.is_enabled == True
+    ).first()
+    if not roster:
+        raise HTTPException(status_code=400, detail="姓名与学号不匹配，不允许注册")
+
+    # 3. 创建用户
+    user = User(
+        student_no=payload.student_no,
+        teacher_no=None,
+        phone=payload.phone,
+        password_hash=get_password_hash(payload.password),
+        real_name=payload.real_name,
+        role="student",
+        teacher_invite_verified=False,
+        is_active=True
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    # 4. 直接签发 token
+    token = create_access_token(subject=str(user.id))
+    return ResponseModel(
+        data={
+            "token": token,
+            "token_type": "bearer",
+            "user_info": {
+                "id": user.id,
+                "real_name": user.real_name,
+                "role": user.role,
+                "student_no": user.student_no,
+                "teacher_no": user.teacher_no,
+                "phone": user.phone,
+            }
+        },
+        message="学生注册成功"
+    )
+
+# 老师注册
+@router.post("/register/teacher", response_model=ResponseModel)
+def register_teacher(payload: TeacherRegisterRequest, db: Session = Depends(get_db)):
+    settings = get_settings()
+
+    if payload.invite_code != settings.TEACHER_INVITE_CODE:
+        raise HTTPException(status_code=400, detail="教师邀请码错误")
+
+    existed = db.query(User).filter(
+        or_(
+            User.teacher_no == payload.teacher_no,
+            User.phone == payload.phone
+        )
+    ).first()
+    if existed:
+        raise HTTPException(status_code=400, detail="工号或手机号已注册")
+
+    user = User(
+        student_no=None,
+        teacher_no=payload.teacher_no,
+        phone=payload.phone,
+        password_hash=get_password_hash(payload.password),
+        real_name=payload.real_name,
+        role="teacher",
+        teacher_invite_verified=True,
+        is_active=True
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    token = create_access_token(subject=str(user.id))
+    return ResponseModel(
+        data={
+            "token": token,
+            "token_type": "bearer",
+            "user_info": {
+                "id": user.id,
+                "real_name": user.real_name,
+                "role": user.role,
+                "student_no": user.student_no,
+                "teacher_no": user.teacher_no,
+                "phone": user.phone,
+            }
+        },
+        message="老师注册成功"
+    )
+
+
 
 @router.get("/me", response_model=ResponseModel)
 def me(current_user: User = Depends(get_current_user)):
     data = UserInfo(
         id=current_user.id,
-        username=current_user.username,
         real_name=current_user.real_name,
         role=current_user.role,
         student_no=current_user.student_no,
         teacher_no=current_user.teacher_no,
-        phone=current_user.phone,
-        email=current_user.email,
+        phone=current_user.phone
     )
     return ResponseModel(data=data)

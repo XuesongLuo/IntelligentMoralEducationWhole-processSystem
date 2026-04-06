@@ -294,8 +294,11 @@ async function loadData() {
   if (!selectedUser.value) return
 
   const localData = {
-    studentId: selectedUser.value.account,
-    studentName: selectedUser.value.name
+    studentId:
+    selectedUser.value.role === 'teacher'
+      ? selectedUser.value.teacher_no
+      : selectedUser.value.student_no,
+    studentName: selectedUser.value.real_name
   }
 
   try {
@@ -345,9 +348,9 @@ onMounted(async () => {
   const currentTeacher = {
     id: localUser.id,
     role: 'teacher',
-    account: localUser.account || localUser.username,
-    name: localUser.name,
-    label: `${localUser.account || localUser.username} ${localUser.name}`
+    real_name: localUser.real_name,
+    teacher_no: localUser.teacher_no,
+    label: `${localUser.teacher_no || localUser.username} ${localUser.real_name}`
   }
 
   teacherViewStore.init(currentTeacher, userListFromApi)
