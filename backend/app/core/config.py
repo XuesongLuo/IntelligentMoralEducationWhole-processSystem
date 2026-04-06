@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     APP_DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
 
+    TEACHER_INVITE_CODE: str = "IMEWS-TEACHER-2026"
+
     MYSQL_HOST: str = "127.0.0.1"
     MYSQL_PORT: int = 3306
     MYSQL_USER: str = "root"
@@ -47,5 +49,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    print("MYSQL密码：", Settings().MYSQL_PASSWORD)
     return Settings()

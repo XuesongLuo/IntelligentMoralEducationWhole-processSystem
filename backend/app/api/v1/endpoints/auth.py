@@ -2,12 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from datetime import datetime
+
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.core.security import create_access_token, verify_password
+from app.core.config import get_settings
+from app.core.security import create_access_token, verify_password, get_password_hash
 from app.models.user import User
-from app.schemas.auth import LoginRequest, LoginResponse, UserInfo
+from app.models.student_roster import StudentRoster
+from app.models.teacher_invite import TeacherInvite
 from app.schemas.common import ResponseModel
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    UserInfo,
+    StudentRegisterRequest,
+    TeacherRegisterRequest,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -119,10 +130,22 @@ def register_student(payload: StudentRegisterRequest, db: Session = Depends(get_
 @router.post("/register/teacher", response_model=ResponseModel)
 def register_teacher(payload: TeacherRegisterRequest, db: Session = Depends(get_db)):
     settings = get_settings()
-
     if payload.invite_code != settings.TEACHER_INVITE_CODE:
         raise HTTPException(status_code=400, detail="教师邀请码错误")
+    """
+    invite = db.query(TeacherInvite).filter(
+        TeacherInvite.invite_code == payload.invite_code
+    ).first()
 
+    if not invite:
+        raise HTTPException(status_code=400, detail="教师邀请码不存在")
+
+    if invite.is_used:
+        raise HTTPException(status_code=400, detail="教师邀请码已被使用")
+
+    if invite.expires_at and invite.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="教师邀请码已过期")
+    """
     existed = db.query(User).filter(
         or_(
             User.teacher_no == payload.teacher_no,
@@ -143,6 +166,12 @@ def register_teacher(payload: TeacherRegisterRequest, db: Session = Depends(get_
         is_active=True
     )
     db.add(user)
+    # 把邀请码标记为已使用
+    """
+    db.flush()  # 先拿到 user.id
+    invite.is_used = True
+    invite.used_by_user_id = user.id
+    """
     db.commit()
     db.refresh(user)
 

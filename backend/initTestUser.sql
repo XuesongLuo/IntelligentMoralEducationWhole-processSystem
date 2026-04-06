@@ -8,10 +8,10 @@ INSERT INTO users (
     teacher_invite_verified,
     is_active
 ) VALUES (
-    'T2026001',
+    '2020007',
     '13800000099',
-    '$2b$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    '系统管理员',
+    '$2b$12$6PMdqsGgMH3ySHVPjjaBdOiDn4scKaZuk2TMMpEcqMQaqXFXBCtjy',
+    '管理员-王老师',
     'teacher',
     1,
     1
