@@ -6,9 +6,9 @@ import {
   mockGetTeacherStudentList
 } from '@/mock'
 
-const USE_MOCK = true
+const USE_MOCK = false
 
-// 学生首页数据
+// 首页数据
 export function getUserHomeData(params) {
   if (USE_MOCK) {
     return mockGetUserHomeData(params)

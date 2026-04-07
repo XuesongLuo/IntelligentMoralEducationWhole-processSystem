@@ -11,6 +11,17 @@ from app.models.teacher_user import TeacherUser  # noqa: F401
 from app.models.student_roster import StudentRoster  # noqa: F401
 from app.models.teacher_invite import TeacherInvite  # noqa: F401
 
+from app.models.resource_category import ResourceCategory  # noqa: F401
+from app.models.learning_resource import LearningResource  # noqa: F401
+from app.models.user_resource_record import UserResourceRecord  # noqa: F401
+
+from app.models.assessment_paper import AssessmentPaper  # noqa: F401
+from app.models.assessment_question import AssessmentQuestion  # noqa: F401
+from app.models.assessment_paper_question import AssessmentPaperQuestion  # noqa: F401
+from app.models.assessment_attempt import AssessmentAttempt  # noqa: F401
+from app.models.assessment_answer import AssessmentAnswer  # noqa: F401
+from app.models.assessment_ai_report import AssessmentAIReport  # noqa: F401
+
 settings = get_settings()
 
 app = FastAPI(
