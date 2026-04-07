@@ -102,8 +102,6 @@ async function loadList() {
     ...query.value,
     userId: selectedUser.value.id
   })
-
-  //const res = await getExamResultList(query.value)
   tableData.value = res.data.records || []
   total.value = res.data.total || 0
 }
@@ -142,8 +140,9 @@ onMounted(async () => {
         {
           id: localUser.id,
           role: 'teacher',
-          account: localUser.account || localUser.username,
-          name: localUser.name
+          real_name: localUser.real_name,
+          teacher_no: localUser.teacher_no,
+          label: `${localUser.teacher_no || localUser.phone} ${localUser.real_name}`
         },
         userListFromApi
       )

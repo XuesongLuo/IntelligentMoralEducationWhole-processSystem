@@ -215,17 +215,38 @@ watch(
 onMounted(async () => {
   const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
 
-  const res = await getTeacherStudentList()
-  const userListFromApi = res.data?.data || []
+  teacherViewStore.restore()
 
   const currentTeacher = {
     id: localUser.id,
     role: 'teacher',
     real_name: localUser.real_name,
     teacher_no: localUser.teacher_no,
-    label: `${localUser.teacher_no || localUser.username} ${localUser.real_name}`
+    label: `${localUser.teacher_no || localUser.phone} ${localUser.real_name}`
   }
-  teacherViewStore.init(currentTeacher, userListFromApi)
+
+  try {
+    const res = await getTeacherStudentList()
+    const apiList = Array.isArray(res.data) ? res.data : []
+    const mergedList = [
+      currentTeacher,
+      ...apiList.filter(item => item.id !== currentTeacher.id)
+    ]
+
+    if (!teacherViewStore.teacherUser) {
+      teacherViewStore.init(currentTeacher, mergedList)
+    } else {
+      teacherViewStore.teacherUser = currentTeacher
+      teacherViewStore.userList = mergedList
+      if (!teacherViewStore.selectedUser) {
+        teacherViewStore.selectedUser = currentTeacher
+      }
+      teacherViewStore.persist()
+    }
+  } catch (error) {
+    console.error('获取老师侧边栏用户列表失败：', error)
+    teacherViewStore.init(currentTeacher, [currentTeacher])
+  }
 })
 
 </script>
