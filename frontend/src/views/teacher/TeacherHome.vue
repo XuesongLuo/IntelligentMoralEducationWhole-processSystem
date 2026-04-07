@@ -69,8 +69,8 @@
                 <span>{{ item.label }}</span>
               </div>
             </div>
-
-            <div ref="radarChartRef" class="radar-chart"></div>
+            <ScoreRadarChart :score-dimensions="homeData.scoreDimensions" />
+            <!--div ref="radarChartRef" class="radar-chart"></div-->
           </div>
         </div>
 
@@ -99,23 +99,20 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { storeToRefs } from 'pinia'
-import * as echarts from 'echarts'
 import { getUserHomeData, getTeacherStudentList } from '@/api/user'
 import { parseLevel } from '@/utils/level'
 import { useTeacherViewStore } from '@/stores/teacherView'
-import LevelBadge from '@/components/common/LevelBadge.vue'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
+import LevelBadge from '@/components/common/LevelBadge.vue'
+import ScoreRadarChart from '@/components/common/ScoreRadarChart.vue'
 
 const router = useRouter()
 const teacherViewStore = useTeacherViewStore()
 const { sidebarCollapsed, selectedUser, userList, isViewingSelf } = storeToRefs(teacherViewStore)
-
-const radarChartRef = ref(null)
-let radarChartInstance = null
 
 const homeData = ref({
   studentId: '',
@@ -146,118 +143,6 @@ const radarScores = computed(() => {
         { label: '最好成绩', color: '#409eff' }
       ]
 })
-
-const radarIndicators = computed(() => {
-  return (homeData.value.scoreDimensions || []).map(item => ({
-    name: item.name,
-    max: 100
-  }))
-})
-
-const bestScoreValues = computed(() => {
-  return (homeData.value.scoreDimensions || []).map(item => Number(item.best || 0))
-})
-
-const worstScoreValues = computed(() => {
-  return (homeData.value.scoreDimensions || []).map(item => {
-    if (item.worst === undefined || item.worst === null) {
-      return Number(item.best || 0)
-    }
-    return Number(item.worst || 0)
-  })
-})
-
-function renderRadarChart() {
-  if (!radarChartRef.value) return
-  if (!radarIndicators.value.length) return
-
-  if (!radarChartInstance) {
-    radarChartInstance = echarts.init(radarChartRef.value)
-  }
-
-  const hasWorst = (homeData.value.scoreDimensions || []).some(
-    item => item.worst !== undefined && item.worst !== null
-  )
-
-  const seriesData = [
-    {
-      value: bestScoreValues.value,
-      name: '最好成绩',
-      areaStyle: {
-        opacity: 0.18
-      },
-      lineStyle: {
-        width: 2,
-        color: '#409eff'
-      },
-      itemStyle: {
-        color: '#409eff'
-      },
-      symbolSize: 6
-    }
-  ]
-  if (hasWorst) {
-    seriesData.push({
-      value: worstScoreValues.value,
-      name: '最低成绩',
-      areaStyle: {
-        opacity: 0.15
-      },
-      lineStyle: {
-        width: 2,
-        color: '#e6a23c'
-      },
-      itemStyle: {
-        color: '#e6a23c'
-      },
-      symbolSize: 6
-    })
-  }
-
-  radarChartInstance.setOption({
-    tooltip: {
-      trigger: 'item'
-    },
-    legend: {
-      show: false
-    },
-    radar: {
-      radius: '62%',
-      center: ['50%', '55%'],
-      indicator: radarIndicators.value,
-      splitNumber: 5,
-      axisName: {
-        color: '#333',
-        fontSize: 14
-      },
-      splitArea: {
-        areaStyle: {
-          color: ['#fff']
-        }
-      },
-      splitLine: {
-        lineStyle: {
-          color: '#dcdfe6'
-        }
-      },
-      axisLine: {
-        lineStyle: {
-          color: '#dcdfe6'
-        }
-      }
-    },
-    series: [
-      {
-        type: 'radar',
-        data: seriesData
-      }
-    ]
-  })
-}
-
-function resizeRadarChart() {
-  radarChartInstance?.resize()
-}
 
 function getProgressColor(val) {
   if (val >= 80) return '#22c55e'
@@ -316,9 +201,6 @@ async function loadData() {
       ...localData
     }
     console.error('获取老师端首页数据失败：', error)
-
-    await nextTick()
-    renderRadarChart()
   }
 }
 
@@ -328,15 +210,6 @@ watch(
     loadData()
   },
   { immediate: true }
-)
-
-watch(
-  () => homeData.value.scoreDimensions,
-  async () => {
-    await nextTick()
-    renderRadarChart()
-  },
-  { deep: true }
 )
 
 onMounted(async () => {
@@ -352,16 +225,7 @@ onMounted(async () => {
     teacher_no: localUser.teacher_no,
     label: `${localUser.teacher_no || localUser.username} ${localUser.real_name}`
   }
-
   teacherViewStore.init(currentTeacher, userListFromApi)
-
-  window.addEventListener('resize', resizeRadarChart)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', resizeRadarChart)
-  radarChartInstance?.dispose()
-  radarChartInstance = null
 })
 
 </script>

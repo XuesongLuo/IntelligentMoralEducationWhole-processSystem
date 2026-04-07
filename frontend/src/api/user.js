@@ -8,12 +8,25 @@ import {
 
 const USE_MOCK = false
 
+
+function getRolePrefix() {
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  return userInfo.role === 'teacher' ? '/teacher' : '/student'
+}
+
 // 首页数据
 export function getUserHomeData(params) {
   if (USE_MOCK) {
     return mockGetUserHomeData(params)
   }
-
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  if (userInfo.role === 'teacher') {
+    return request({
+      url: '/teacher/home',
+      method: 'get',
+      params
+    })
+  }
   return request({
     url: '/student/home',
     method: 'get'

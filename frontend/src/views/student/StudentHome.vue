@@ -5,7 +5,7 @@
         <div class="overview-grid">
           <div class="left-panel">
             <div class="student-meta">
-              <p>用户名：{{ homeData.studentId }}</p>
+              <p>学号：{{ homeData.studentId }}</p>
               <p>姓名：{{ homeData.studentName }}</p>
             </div>
 
@@ -59,7 +59,9 @@
               </div>
             </div>
 
-            <div class="radar-fake">
+            <ScoreRadarChart :score-dimensions="homeData.scoreDimensions" />
+
+            <!--div class="radar-fake">
               <div class="radar-item" v-for="dim in homeData.scoreDimensions" :key="dim.key">
                 <div class="dim-name">{{ dim.name }}</div>
                 <div class="dim-bar">
@@ -68,7 +70,7 @@
                 </div>
                 <div class="dim-text">{{ dim.best }}/{{ dim.worst }}</div>
               </div>
-            </div>
+            </div-->
           </div>
         </div>
       </el-card>
@@ -97,6 +99,7 @@ import { getUserHomeData } from '@/api/user'
 import { parseLevel } from '@/utils/level'
 import { ElMessage } from 'element-plus'
 import LevelBadge from '@/components/common/LevelBadge.vue'
+import ScoreRadarChart from '@/components/common/ScoreRadarChart.vue'
 
 const router = useRouter()
 
@@ -120,10 +123,17 @@ const levelInfo = computed(() => parseLevel(homeData.value.levelValue || 0))
 const radarScores = computed(() => {
   const list = homeData.value.scoreDimensions || []
   if (!list.length) return []
-  return [
-    { label: '最好成绩', color: '#409eff' },
-    { label: '最低成绩', color: '#e6a23c' }
-  ]
+
+  const hasWorst = list.some(item => item.worst !== undefined && item.worst !== null)
+
+  return hasWorst
+    ? [
+        { label: '最好成绩', color: '#409eff' },
+        { label: '最低成绩', color: '#e6a23c' }
+      ]
+    : [
+        { label: '最好成绩', color: '#409eff' }
+      ]
 })
 
 function getProgressColor(val) {
@@ -158,6 +168,7 @@ async function loadData() {
     console.error('获取学生首页数据失败：', error)
   }
 }
+
 function loadLoginUser() {
   const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
 
@@ -166,11 +177,11 @@ function loadLoginUser() {
   homeData.value.phone = localUser.phone || ''
 }
 
-
 onMounted(() => {
   loadLoginUser()
   loadData()
 })
+
 </script>
 
 <style scoped>
