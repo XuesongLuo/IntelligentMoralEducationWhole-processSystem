@@ -129,13 +129,23 @@ def get_teacher_student_list(
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="只有老师可以访问")
 
-    teacher_item = {
-        "id": current_user.id,
-        "role": "teacher",
-        "real_name": current_user.real_name,
-        "teacher_no": current_user.teacher_profile.teacher_no if current_user.teacher_profile else "",
-        "label": f"{current_user.teacher_profile.teacher_no if current_user.teacher_profile else current_user.phone} {current_user.real_name}",
-    }
+    teachers = (
+        db.query(AuthUser, TeacherUser)
+        .join(TeacherUser, TeacherUser.auth_user_id == AuthUser.id)
+        .filter(AuthUser.role == "teacher", AuthUser.is_active == True)
+        .order_by(TeacherUser.teacher_no.asc())
+        .all()
+    )
+    teacher_items = [
+        {
+            "id": user.id,
+            "role": "teacher",
+            "real_name": user.real_name,
+            "teacher_no": teacher.teacher_no,
+            "label": f"{teacher.teacher_no} {user.real_name}",
+        }
+        for user, teacher in teachers
+    ]
 
     students = (
         db.query(AuthUser, StudentUser)
@@ -144,7 +154,6 @@ def get_teacher_student_list(
         .order_by(StudentUser.student_no.asc())
         .all()
     )
-
     student_items = [
         {
             "id": user.id,
@@ -156,7 +165,9 @@ def get_teacher_student_list(
         for user, student in students
     ]
 
-    return ResponseModel(data=[teacher_item, *student_items])
+    teacher_items.sort(key=lambda x: (0 if x["id"] == current_user.id else 1, x["teacher_no"]))
+
+    return ResponseModel(data=[teacher_items, *student_items])
 
 
 @router.get("/home", response_model=StudentHomeResponseModel)

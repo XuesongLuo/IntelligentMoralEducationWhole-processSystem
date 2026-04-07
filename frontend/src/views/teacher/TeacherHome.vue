@@ -228,17 +228,21 @@ onMounted(async () => {
   try {
     const res = await getTeacherStudentList()
     const apiList = Array.isArray(res.data) ? res.data : []
-    const mergedList = [
-      currentTeacher,
-      ...apiList.filter(item => item.id !== currentTeacher.id)
-    ]
+
+   const mergedList = apiList.some(item => item.id === currentTeacher.id)
+      ? apiList
+      : [currentTeacher, ...apiList]
 
     if (!teacherViewStore.teacherUser) {
       teacherViewStore.init(currentTeacher, mergedList)
     } else {
       teacherViewStore.teacherUser = currentTeacher
       teacherViewStore.userList = mergedList
-      if (!teacherViewStore.selectedUser) {
+      
+      if (
+        !teacherViewStore.selectedUser ||
+        !mergedList.some(item => item.id === teacherViewStore.selectedUser.id)
+      ) {
         teacherViewStore.selectedUser = currentTeacher
       }
       teacherViewStore.persist()

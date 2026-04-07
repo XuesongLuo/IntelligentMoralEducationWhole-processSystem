@@ -126,31 +126,45 @@ watch(
 )
 
 onMounted(async () => {
-  //loadList()
-  if (!teacherViewStore.teacherUser) {
-    const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
-
-    teacherViewStore.restore()
+  const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
     
+
+  teacherViewStore.restore()
+
+  const currentTeacher = {
+    id: localUser.id,
+    role: 'teacher',
+    real_name: localUser.real_name,
+    teacher_no: localUser.teacher_no,
+    label: `${localUser.teacher_no || localUser.phone} ${localUser.real_name}`
+  }
+
+  try {
     const res = await getTeacherStudentList()
-    const userListFromApi = res.data?.data || []
+    const apiList = Array.isArray(res.data) ? res.data : []
+
+    const mergedList = apiList.some(item => item.id === currentTeacher.id)
+      ? apiList
+      : [currentTeacher, ...apiList]
 
     if (!teacherViewStore.teacherUser) {
-      teacherViewStore.init(
-        {
-          id: localUser.id,
-          role: 'teacher',
-          real_name: localUser.real_name,
-          teacher_no: localUser.teacher_no,
-          label: `${localUser.teacher_no || localUser.phone} ${localUser.real_name}`
-        },
-        userListFromApi
-      )
+      teacherViewStore.init(currentTeacher, mergedList)
     } else {
-      teacherViewStore.userList = userListFromApi
+      teacherViewStore.teacherUser = currentTeacher
+      teacherViewStore.userList = mergedList
+
+      if (
+        !teacherViewStore.selectedUser ||
+        !mergedList.some(item => item.id === teacherViewStore.selectedUser.id)
+      ) {
+        teacherViewStore.selectedUser = currentTeacher
+      }
       teacherViewStore.persist()
     }
-  }
+  } catch (error) {
+    console.error('获取老师侧边栏用户列表失败：', error)
+    teacherViewStore.init(currentTeacher, [currentTeacher])
+  }  
 })
 </script>
 
