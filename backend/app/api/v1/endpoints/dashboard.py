@@ -1,14 +1,16 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user
-from app.models.user import User
+from app.models.auth_user import AuthUser
+from app.models.student_user import StudentUser
+from app.models.teacher_user import TeacherUser
 from app.schemas.common import ResponseModel
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/overview", response_model=ResponseModel)
-def get_dashboard_overview(current_user: User = Depends(get_current_user)):
+def get_dashboard_overview(current_user: AuthUser = Depends(get_current_user)):
     """
     先返回占位数据，确保前端能联调。
     后续再替换成真实统计逻辑：
