@@ -167,7 +167,7 @@ def get_teacher_student_list(
 
     teacher_items.sort(key=lambda x: (0 if x["id"] == current_user.id else 1, x["teacher_no"]))
 
-    return ResponseModel(data=[teacher_items, *student_items])
+    return ResponseModel(data=[*teacher_items, *student_items])
 
 
 @router.get("/home", response_model=StudentHomeResponseModel)
