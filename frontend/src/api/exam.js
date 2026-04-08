@@ -8,7 +8,7 @@ import {
   mockGetExamResultDetail
 } from '@/mock'
 
-const USE_MOCK = true
+const USE_MOCK = false
 
 function getRolePrefix() {
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
@@ -59,6 +59,23 @@ export function submitExamPaper(data) {
 
   return request({
     url: `${getRolePrefix()}/exam/submit`,
+    method: 'post',
+    data
+  })
+}
+
+export function submitExamHeartbeat(data) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      data: {
+        activeSeconds: 0,
+        submitted: false
+      }
+    })
+  }
+
+  return request({
+    url: `${getRolePrefix()}/exam/heartbeat`,
     method: 'post',
     data
   })

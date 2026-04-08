@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "dev"
     APP_DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
+    BACKEND_PUBLIC_BASE_URL: str = "http://127.0.0.1:8000"
 
     TEACHER_INVITE_CODE: str = "IMEWS-TEACHER-2026"
 
@@ -37,6 +38,12 @@ class Settings(BaseSettings):
     SMS_MODE: str = "mock"   # mock / real
     SMS_CODE_EXPIRE_SECONDS: int = 300
     SMS_SEND_INTERVAL_SECONDS: int = 60
+    FORGOT_PASSWORD_LIMIT_WINDOW_SECONDS: int = 600
+    FORGOT_PASSWORD_LIMIT_MAX_ATTEMPTS: int = 5
+
+    AI_ANALYSIS_WEBHOOK_URL: str = ""
+    AI_CALLBACK_TOKEN: str = "imews-ai-callback-token"
+    AI_REQUEST_TIMEOUT_SECONDS: int = 15
 
     @property
     def sqlalchemy_database_uri(self) -> str:

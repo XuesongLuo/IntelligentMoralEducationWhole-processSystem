@@ -6,9 +6,10 @@
       <AuthInput
         v-model="form.username"
         icon="◉"
-        placeholder="用户名"
+        placeholder="学号/工号"
         :status="status.username"
         :error-message="errors.username"
+        @blur="validateField('username')"
       />
 
       <AuthInput
@@ -17,6 +18,7 @@
         placeholder="真实姓名"
         :status="status.realName"
         :error-message="errors.realName"
+        @blur="validateField('realName')"
       />
 
       <AuthInput
@@ -26,6 +28,7 @@
         placeholder="请输入新密码"
         :status="status.newPassword"
         :error-message="errors.newPassword"
+        @blur="validateField('newPassword')"
       />
 
       <AuthInput
@@ -35,6 +38,7 @@
         placeholder="再次输入密码"
         :status="status.confirmPassword"
         :error-message="errors.confirmPassword"
+        @blur="validateField('confirmPassword')"
       />
 
       <div class="btn-group">
@@ -84,36 +88,41 @@ const errors = reactive({
 })
 
 function validate() {
-  errors.username = ''
-  errors.realName = ''
-  errors.newPassword = ''
-  errors.confirmPassword = ''
-
-  if (!form.username) {
-    errors.username = '请输入学号/工号'
-  } else if (!isStudentOrWorkNo(form.username)) {
-    errors.username = '学号/工号格式不正确'
-  }
-
-  if (!form.realName) {
-    errors.realName = '请输入真实姓名'
-  } else if (!isRealName(form.realName)) {
-    errors.realName = '姓名格式不正确'
-  }
-
-  if (!form.newPassword) {
-    errors.newPassword = '请输入新密码'
-  } else if (!isPassword(form.newPassword)) {
-    errors.newPassword = '密码长度需为6-18位'
-  }
-
-  if (!form.confirmPassword) {
-    errors.confirmPassword = '请再次输入密码'
-  } else if (form.confirmPassword !== form.newPassword) {
-    errors.confirmPassword = '两次密码输入不一致'
-  }
-
+  validateField('username')
+  validateField('realName')
+  validateField('newPassword')
+  validateField('confirmPassword')
   return !Object.values(errors).some(Boolean)
+}
+
+function validateField(field) {
+  if (field === 'username') {
+    errors.username = ''
+    if (!form.username) errors.username = '请输入学号/工号'
+    else if (!isStudentOrWorkNo(form.username)) errors.username = '学号/工号格式不正确'
+  }
+
+  if (field === 'realName') {
+    errors.realName = ''
+    if (!form.realName) errors.realName = '请输入真实姓名'
+    else if (!isRealName(form.realName)) errors.realName = '姓名格式不正确'
+  }
+
+  if (field === 'newPassword') {
+    errors.newPassword = ''
+    if (!form.newPassword) errors.newPassword = '请输入新密码'
+    else if (!/^.{6,10}$/.test(form.newPassword)) errors.newPassword = '密码长度需为6-10位'
+
+    if (form.confirmPassword) {
+      validateField('confirmPassword')
+    }
+  }
+
+  if (field === 'confirmPassword') {
+    errors.confirmPassword = ''
+    if (!form.confirmPassword) errors.confirmPassword = '请再次输入密码'
+    else if (form.confirmPassword !== form.newPassword) errors.confirmPassword = '两次密码输入不一致'
+  }
 }
 
 const status = computed(() => ({
@@ -137,7 +146,7 @@ async function handleSubmit() {
     router.push('/login')
   } catch (error) {
     console.error(error)
-    alert(error?.response?.data?.message || '找回失败，请确认学号和姓名是否匹配')
+    alert(error?.response?.data?.detail || error?.response?.data?.message || '找回失败，请确认学号和姓名是否匹配')
   } finally {
     loading.value = false
   }

@@ -16,7 +16,7 @@
     <div class="detail-layout" v-loading="loading">
       <div class="left-info">
         <el-card shadow="never">
-          <p>用户名：{{ detail.studentNo }}</p>
+          <p>用户编号：{{ detail.studentNo }}</p>
           <p>姓名：{{ detail.realName }}</p>
           <p>提交时间：{{ detail.submitTime }}</p>
           <p>答题时间：{{ detail.durationMinutes }} min</p>
@@ -47,21 +47,28 @@
           <h3>模型智能分析结果</h3>
 
           <div class="analysis-scroll">
-            <div
-              v-for="item in detail.aiAnalysis?.dimensions || []"
-              :key="item.dimension"
-              class="score-card"
-            >
-              <div class="score-head">
-                <span>{{ item.dimension }}</span>
-                <el-tag type="primary">{{ item.score }}分</el-tag>
+            <template v-if="detail.aiAnalysis?.dimensions?.length">
+              <div
+                v-for="item in detail.aiAnalysis.dimensions"
+                :key="item.dimension"
+                class="score-card"
+              >
+                <div class="score-head">
+                  <span>{{ item.dimension }}</span>
+                  <el-tag type="primary">{{ item.score }}分</el-tag>
+                </div>
+                <p>{{ item.reason }}</p>
               </div>
-              <p>{{ item.reason }}</p>
-            </div>
 
-            <div class="summary-box">
-              <h4>综合结论</h4>
-              <p>{{ detail.aiAnalysis?.summary }}</p>
+              <div class="summary-box">
+                <h4>综合结论</h4>
+                <p>{{ detail.aiAnalysis.summary || '-' }}</p>
+              </div>
+            </template>
+
+            <div v-else class="summary-box empty-summary">
+              <h4>分析状态</h4>
+              <p>{{ detail.aiAnalysis?.summary || '分析结果暂未生成' }}</p>
             </div>
           </div>
         </el-card>
@@ -71,7 +78,7 @@
 </template>
 
 <script setup>
-import { watch, ref } from 'vue'
+import { ref, watch } from 'vue'
 import { getExamResultDetail } from '@/api/exam'
 
 const props = defineProps({
@@ -111,13 +118,16 @@ function closeDialog() {
 
 function formatAnswer(answer) {
   if (Array.isArray(answer)) return answer.join('、')
-  if (answer === true) return '对'
-  if (answer === false) return '错'
-  return answer
+  if (answer === true) return '正确'
+  if (answer === false) return '错误'
+  if (answer === null || answer === undefined || answer === '') return '-'
+  if (typeof answer === 'object') return JSON.stringify(answer)
+  return String(answer)
 }
 
 async function loadDetail() {
   if (!props.resultId || !props.modelValue) return
+
   loading.value = true
   try {
     const res = await getExamResultDetail(props.resultId, props.userId)
@@ -143,48 +153,61 @@ watch(
   gap: 16px;
   min-height: 620px;
 }
+
 .left-info,
 .middle-answer,
 .right-analysis {
   min-height: 620px;
 }
+
 .answer-scroll,
 .analysis-scroll {
   height: 560px;
   overflow-y: auto;
 }
+
 .answer-item {
   padding: 16px 0;
   border-bottom: 1px solid #ebeef5;
 }
+
 .q-title {
   font-size: 16px;
   font-weight: 600;
   line-height: 1.8;
   margin-bottom: 10px;
 }
+
 .q-answer {
   color: #606266;
 }
+
 .label {
   font-weight: 600;
 }
+
 .score-card {
   border: 1px solid #ebeef5;
   border-radius: 10px;
   padding: 14px;
   margin-bottom: 14px;
 }
+
 .score-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
 }
+
 .summary-box {
   margin-top: 18px;
   padding: 14px;
   background: #f8fafc;
   border-radius: 10px;
 }
-</style>s
+
+.empty-summary {
+  margin-top: 0;
+}
+</style>

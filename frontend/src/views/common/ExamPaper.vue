@@ -34,7 +34,7 @@
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
-import { getExamPaper, submitExamPaper } from '@/api/exam'
+import { getExamPaper, submitExamHeartbeat, submitExamPaper } from '@/api/exam'
 import { useExamTimer } from '@/composables/useExamTimer'
 import QuestionRenderer from '@/components/common/QuestionRenderer.vue'
 
@@ -44,6 +44,7 @@ const router = useRouter()
 const type = computed(() => route.params.type)
 const examId = computed(() => route.params.examId)
 const loading = ref(false)
+let heartbeatTimer = null
 
 const currentRole = computed(() => {
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
@@ -84,6 +85,10 @@ const draftKey = computed(() => {
 // 时间戳
 const deadlineAt = ref(null)
 const restoredRemainingSeconds = ref(null)
+const heartbeatPayload = computed(() => ({
+  examId: paperData.value.examId || examId.value,
+  examType: type.value
+}))
 
 
 function saveDraft() {
@@ -126,6 +131,56 @@ function restoreDraft(questions = []) {
 function clearDraft() {
   localStorage.removeItem(draftKey.value)
 }
+
+function handleContextMenu(event) {
+  event.preventDefault()
+}
+
+async function sendHeartbeat(options = {}) {
+  const payload = heartbeatPayload.value
+  if (!payload.examId || !payload.examType) return
+
+  if (options.keepalive) {
+    const token = localStorage.getItem('token')
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    const rolePrefix = userInfo.role === 'teacher' ? '/teacher' : '/student'
+
+    try {
+      await fetch(`/api/v1${rolePrefix}/exam/heartbeat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify(payload),
+        keepalive: true
+      })
+    } catch (error) {
+      console.error('发送离开前心跳失败：', error)
+    }
+    return
+  }
+
+  try {
+    await submitExamHeartbeat(payload)
+  } catch (error) {
+    console.error('发送考试心跳失败：', error)
+  }
+}
+
+function startHeartbeat() {
+  stopHeartbeat()
+  heartbeatTimer = window.setInterval(() => {
+    sendHeartbeat()
+  }, 30000)
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) {
+    window.clearInterval(heartbeatTimer)
+    heartbeatTimer = null
+  }
+}
 // 设置题目默认答案
 function buildDefaultAnswer(q) {
   if (q.type === 'multiple') return []
@@ -165,6 +220,8 @@ async function loadPaper() {
       saveDraft()
     }
     start()
+    await sendHeartbeat()
+    startHeartbeat()
   } finally {
     loading.value = false
   }
@@ -221,6 +278,7 @@ async function handleSubmit(force) {
 
     await submitExamPaper(payload)
     clearDraft()
+    stopHeartbeat()
     stop()
     ElMessage.success(force ? '已自动提交' : '提交成功')
     router.replace(`${routePrefix.value}/moral-exam`)
@@ -231,6 +289,7 @@ async function handleSubmit(force) {
 // 离开页面前提示用户
 function handleBeforeUnload(event) {
   const hasDraft = !!localStorage.getItem(draftKey.value)
+  sendHeartbeat({ keepalive: true })
   if (!hasDraft) return
   event.preventDefault()
   event.returnValue = ''
@@ -248,11 +307,15 @@ watch(
 onMounted(() => {
   loadPaper()
   window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('contextmenu', handleContextMenu)
 })
 
 onBeforeUnmount(() => {
+  stopHeartbeat()
   stop()
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('contextmenu', handleContextMenu)
+  sendHeartbeat({ keepalive: true })
 })
 </script>
 

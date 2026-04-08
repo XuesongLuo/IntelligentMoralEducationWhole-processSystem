@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -12,7 +14,44 @@ from app.models.learning_resource import LearningResource
 from app.models.user_resource_record import UserResourceRecord
 from app.models.assessment_attempt import AssessmentAttempt
 from app.models.assessment_ai_report import AssessmentAIReport
+from app.models.assessment_answer import AssessmentAnswer
+from app.models.assessment_paper import AssessmentPaper
+from app.models.assessment_paper_question import AssessmentPaperQuestion
+from app.models.assessment_question import AssessmentQuestion
 from app.schemas.common import ResponseModel
+from app.schemas.exam import (
+    ExamHeartbeatData,
+    ExamHeartbeatRequest,
+    ExamHeartbeatResponseModel,
+    ExamInfoData,
+    ExamInfoResponseModel,
+    ExamNoticeData,
+    ExamNoticeResponseModel,
+    ExamPaperData,
+    ExamPaperResponseModel,
+    ExamQuestionItem,
+    ExamQuestionOption,
+    ExamResultAnalysis,
+    ExamResultAnalysisDimension,
+    ExamResultAnswerItem,
+    ExamResultDetailData,
+    ExamResultDetailResponseModel,
+    ExamResultListData,
+    ExamResultListItem,
+    ExamResultListResponseModel,
+    SubmitExamRequest,
+    SubmitExamResponseData,
+    SubmitExamResponseModel,
+)
+from app.services.exam_runtime import (
+    acquire_submit_lock,
+    build_ai_payload,
+    dispatch_ai_analysis,
+    ensure_exam_session,
+    finalize_exam_session,
+    heartbeat_exam_session,
+    release_submit_lock,
+)
 from app.schemas.student import (
     StudentHomeData,
     StudentHomeProgressItem,
@@ -21,6 +60,152 @@ from app.schemas.student import (
 )
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
+
+
+DIMENSION_CONFIG = [
+    ("research_integrity", "科研诚信脆弱型", "score_research_integrity"),
+    ("communication_anxiety", "医患沟通焦虑型", "score_communication_anxiety"),
+    ("career_identity", "职业认同模糊型", "score_career_identity"),
+    ("humanistic_care", "人文关怀缺失型", "score_humanistic_care"),
+    ("comprehensive_balance", "综合发展均衡型", "score_comprehensive_balance"),
+]
+
+EXAM_NOTICE_MAP = {
+    "survey": [
+        "所有题目均为必答题。",
+        "考试开始后请勿刷新或关闭浏览器。",
+        "请根据真实想法独立作答。",
+        "提交后答案将无法修改。",
+    ],
+    "integrity": [
+        "所有题目均为必答题。",
+        "请独立完成，不得切换账号代答。",
+        "倒计时结束后系统会自动提交。",
+        "请认真核对后再提交试卷。",
+    ],
+}
+
+
+def format_datetime(value: datetime | None) -> str:
+    if not value:
+        return ""
+    return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def build_dimension_reason(score: float, dimension_name: str) -> str:
+    if score >= 85:
+        level_text = "表现稳定"
+    elif score >= 70:
+        level_text = "具备一定基础"
+    else:
+        level_text = "仍有提升空间"
+    return f"{dimension_name}{level_text}，建议结合训练内容持续复盘。"
+
+
+def build_result_analysis(report: AssessmentAIReport | None) -> ExamResultAnalysis:
+    if not report:
+        return ExamResultAnalysis(dimensions=[], summary="")
+    if report.status != "completed":
+        return ExamResultAnalysis(dimensions=[], summary=report.summary or "")
+
+    dimensions = []
+    for _, name, attr in DIMENSION_CONFIG:
+        score = getattr(report, attr)
+        if score is None:
+            continue
+        dimensions.append(
+            ExamResultAnalysisDimension(
+                dimension=name,
+                score=round(float(score), 1),
+                reason=build_dimension_reason(float(score), name),
+            )
+        )
+
+    return ExamResultAnalysis(
+        dimensions=dimensions,
+        summary=report.summary or "",
+    )
+
+
+def map_question_type(question_type: str) -> str:
+    mapping = {
+        "boolean": "judge",
+        "fill_blank": "blank",
+    }
+    return mapping.get(question_type, question_type)
+
+
+def build_question_options(question: AssessmentQuestion) -> list[ExamQuestionOption]:
+    options = question.options_json if isinstance(question.options_json, list) else []
+    result = []
+    for item in options:
+        if isinstance(item, dict):
+            label = item.get("text") or item.get("label") or ""
+            value = item.get("label")
+            if value is None:
+                value = item.get("value")
+            result.append(ExamQuestionOption(label=str(label), value=value))
+    return result
+
+
+def get_active_paper(db: Session, exam_type: str) -> AssessmentPaper | None:
+    return (
+        db.query(AssessmentPaper)
+        .filter(
+            AssessmentPaper.paper_type == exam_type,
+            AssessmentPaper.is_active == True,
+        )
+        .order_by(AssessmentPaper.version_no.desc(), AssessmentPaper.id.desc())
+        .first()
+    )
+
+
+def build_paper_response(db: Session, paper: AssessmentPaper) -> ExamPaperData:
+    questions = (
+        db.query(AssessmentQuestion, AssessmentPaperQuestion.sort_order)
+        .join(AssessmentPaperQuestion, AssessmentPaperQuestion.question_id == AssessmentQuestion.id)
+        .filter(AssessmentPaperQuestion.paper_id == paper.id)
+        .order_by(AssessmentPaperQuestion.sort_order.asc(), AssessmentQuestion.id.asc())
+        .all()
+    )
+
+    return ExamPaperData(
+        examId=paper.id,
+        paperName=paper.title,
+        durationSeconds=paper.duration_seconds,
+        questions=[
+            ExamQuestionItem(
+                id=question.id,
+                type=map_question_type(question.question_type),
+                title=question.title,
+                options=build_question_options(question),
+            )
+            for question, _ in questions
+        ],
+    )
+
+
+def normalize_answer_for_storage(question: AssessmentQuestion, answer):
+    question_type = map_question_type(question.question_type)
+    if question_type == "multiple":
+        if isinstance(answer, list):
+            return answer
+        if answer in (None, ""):
+            return []
+        return [answer]
+    if question_type == "judge":
+        if isinstance(answer, bool):
+            return answer
+        if str(answer).lower() == "true":
+            return True
+        if str(answer).lower() == "false":
+            return False
+        return answer
+    return answer
+
+
+def normalize_standard_answer(question: AssessmentQuestion):
+    return normalize_answer_for_storage(question, question.answer_json)
 
 
 def build_home_data(target_user: AuthUser, db: Session) -> StudentHomeData:
@@ -187,3 +372,323 @@ def get_teacher_home(
             raise HTTPException(status_code=404, detail="目标用户不存在")
 
     return StudentHomeResponseModel(data=build_home_data(target_user, db))
+
+
+@router.get("/exam/{exam_type}/notice", response_model=ExamNoticeResponseModel)
+def get_teacher_exam_notice(
+    exam_type: str,
+    current_user: AuthUser = Depends(get_current_user),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以访问考试须知")
+    if exam_type not in EXAM_NOTICE_MAP:
+        raise HTTPException(status_code=404, detail="考试类型不存在")
+    return ExamNoticeResponseModel(data=ExamNoticeData(items=EXAM_NOTICE_MAP[exam_type]))
+
+
+@router.get("/exam/{exam_type}/info", response_model=ExamInfoResponseModel)
+def get_teacher_exam_info(
+    exam_type: str,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以访问考试信息")
+    paper = get_active_paper(db, exam_type)
+    if not paper:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+    return ExamInfoResponseModel(
+        data=ExamInfoData(
+            examId=paper.id,
+            paperName=paper.title,
+        )
+    )
+
+
+@router.get("/exam/{exam_type}/paper/{exam_id}", response_model=ExamPaperResponseModel)
+def get_teacher_exam_paper(
+    exam_type: str,
+    exam_id: int,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以访问试卷")
+
+    paper = (
+        db.query(AssessmentPaper)
+        .filter(
+            AssessmentPaper.id == exam_id,
+            AssessmentPaper.paper_type == exam_type,
+            AssessmentPaper.is_active == True,
+        )
+        .first()
+    )
+    if not paper:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+
+    ensure_exam_session(current_user.id, paper.id, paper.paper_type, paper.duration_seconds)
+    return ExamPaperResponseModel(data=build_paper_response(db, paper))
+
+
+@router.post("/exam/heartbeat", response_model=ExamHeartbeatResponseModel)
+def teacher_exam_heartbeat(
+    payload: ExamHeartbeatRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以发送考试心跳")
+
+    try:
+        exam_id = int(payload.examId)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="试卷编号无效")
+
+    paper = (
+        db.query(AssessmentPaper)
+        .filter(
+            AssessmentPaper.id == exam_id,
+            AssessmentPaper.paper_type == payload.examType,
+            AssessmentPaper.is_active == True,
+        )
+        .first()
+    )
+    if not paper:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+
+    state = heartbeat_exam_session(current_user.id, paper.id, paper.paper_type, paper.duration_seconds)
+    return ExamHeartbeatResponseModel(
+        data=ExamHeartbeatData(
+            activeSeconds=state["active_seconds"],
+            submitted=state["submitted"],
+        )
+    )
+
+
+@router.post("/exam/submit", response_model=SubmitExamResponseModel)
+def submit_teacher_exam(
+    payload: SubmitExamRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以提交试卷")
+
+    try:
+        exam_id = int(payload.examId)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="试卷编号无效")
+
+    paper = (
+        db.query(AssessmentPaper)
+        .filter(
+            AssessmentPaper.id == exam_id,
+            AssessmentPaper.paper_type == payload.examType,
+            AssessmentPaper.is_active == True,
+        )
+        .first()
+    )
+    if not paper:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+
+    if not acquire_submit_lock(current_user.id, paper.id):
+        raise HTTPException(status_code=409, detail="请勿重复提交")
+
+    questions = (
+        db.query(AssessmentQuestion)
+        .join(AssessmentPaperQuestion, AssessmentPaperQuestion.question_id == AssessmentQuestion.id)
+        .filter(AssessmentPaperQuestion.paper_id == paper.id)
+        .all()
+    )
+    answer_map = {}
+    for item in payload.answers:
+        try:
+            answer_map[int(item.questionId)] = item.answer
+        except (TypeError, ValueError):
+            continue
+
+    try:
+        try:
+            duration_seconds = finalize_exam_session(current_user.id, paper.id, paper.paper_type, paper.duration_seconds)
+        except ValueError:
+            raise HTTPException(status_code=409, detail="试卷已提交，请勿重复提交")
+        submitted_at = datetime.utcnow()
+        started_at = submitted_at
+
+        attempt = AssessmentAttempt(
+            user_id=current_user.id,
+            paper_id=paper.id,
+            paper_type=paper.paper_type,
+            status="ai_processing",
+            started_at=started_at,
+            submitted_at=submitted_at,
+            duration_seconds=max(duration_seconds, 1),
+            total_score=None,
+            force_submitted=payload.forced,
+        )
+        db.add(attempt)
+        db.flush()
+
+        answer_rows = []
+        for question in questions:
+            normalized_answer = normalize_answer_for_storage(question, answer_map.get(question.id))
+            answer = AssessmentAnswer(
+                attempt_id=attempt.id,
+                question_id=question.id,
+                answer_json=normalized_answer,
+                score=None,
+                judged_at=None,
+            )
+            db.add(answer)
+            answer_rows.append(answer)
+
+        report = AssessmentAIReport(
+            attempt_id=attempt.id,
+            status="processing",
+            summary="AI 分析中",
+            raw_response_json={"status": "processing"},
+        )
+        db.add(report)
+        db.commit()
+
+        payload_json = build_ai_payload(
+            attempt=attempt,
+            paper=paper,
+            user=current_user,
+            questions=questions,
+            answers=answer_rows,
+        )
+        success, error_message = dispatch_ai_analysis(payload_json)
+        if not success:
+            report.status = "failed"
+            report.summary = "AI 分析任务发送失败"
+            report.raw_response_json = {
+                "status": "failed",
+                "message": error_message,
+            }
+            attempt.status = "submitted"
+            db.commit()
+
+        return SubmitExamResponseModel(
+            data=SubmitExamResponseData(
+                success=True,
+                resultId=attempt.id,
+            )
+        )
+    finally:
+        release_submit_lock(current_user.id, paper.id)
+
+
+@router.get("/exam/results", response_model=ExamResultListResponseModel)
+def get_teacher_exam_results(
+    userId: int = Query(...),
+    pageNum: int = Query(default=1, ge=1),
+    pageSize: int = Query(default=10, ge=1, le=100),
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以访问考试结果")
+
+    target_user = db.query(AuthUser).filter(AuthUser.id == userId).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="目标用户不存在")
+
+    query = (
+        db.query(AssessmentAttempt, AssessmentPaper, AssessmentAIReport)
+        .join(AssessmentPaper, AssessmentPaper.id == AssessmentAttempt.paper_id)
+        .outerjoin(AssessmentAIReport, AssessmentAIReport.attempt_id == AssessmentAttempt.id)
+        .filter(
+            AssessmentAttempt.user_id == userId,
+            AssessmentAttempt.submitted_at.isnot(None),
+        )
+        .order_by(AssessmentAttempt.submitted_at.desc(), AssessmentAttempt.id.desc())
+    )
+
+    total = query.count()
+    rows = query.offset((pageNum - 1) * pageSize).limit(pageSize).all()
+
+    records = [
+        ExamResultListItem(
+            id=attempt.id,
+            title=paper.title,
+            submitTime=format_datetime(attempt.submitted_at),
+            durationMinutes=max(int((attempt.duration_seconds or 0) / 60), 0),
+            analysisReady=bool(report and report.status == "completed"),
+        )
+        for attempt, paper, report in rows
+    ]
+
+    return ExamResultListResponseModel(
+        data=ExamResultListData(records=records, total=total)
+    )
+
+
+@router.get("/exam/results/{result_id}", response_model=ExamResultDetailResponseModel)
+def get_teacher_exam_result_detail(
+    result_id: int,
+    userId: int = Query(...),
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以访问考试结果详情")
+
+    target_user = db.query(AuthUser).filter(AuthUser.id == userId).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="目标用户不存在")
+
+    row = (
+        db.query(AssessmentAttempt, AssessmentPaper, AssessmentAIReport)
+        .join(AssessmentPaper, AssessmentPaper.id == AssessmentAttempt.paper_id)
+        .outerjoin(AssessmentAIReport, AssessmentAIReport.attempt_id == AssessmentAttempt.id)
+        .filter(
+            AssessmentAttempt.id == result_id,
+            AssessmentAttempt.user_id == userId,
+            AssessmentAttempt.submitted_at.isnot(None),
+        )
+        .first()
+    )
+
+    if not row:
+        raise HTTPException(status_code=404, detail="考试结果不存在")
+
+    attempt, paper, report = row
+
+    answer_rows = (
+        db.query(AssessmentAnswer, AssessmentQuestion)
+        .join(AssessmentQuestion, AssessmentQuestion.id == AssessmentAnswer.question_id)
+        .filter(AssessmentAnswer.attempt_id == attempt.id)
+        .order_by(AssessmentAnswer.id.asc())
+        .all()
+    )
+
+    answer_list = [
+        ExamResultAnswerItem(
+            questionId=question.id,
+            questionTitle=question.title,
+            answer=answer.answer_json,
+        )
+        for answer, question in answer_rows
+    ]
+
+    user_no = (
+        target_user.teacher_profile.teacher_no
+        if target_user.role == "teacher" and target_user.teacher_profile
+        else target_user.student_profile.student_no
+        if target_user.role == "student" and target_user.student_profile
+        else ""
+    )
+
+    return ExamResultDetailResponseModel(
+        data=ExamResultDetailData(
+            paperName=paper.title,
+            studentNo=user_no,
+            realName=target_user.real_name,
+            submitTime=format_datetime(attempt.submitted_at),
+            durationMinutes=max(int((attempt.duration_seconds or 0) / 60), 0),
+            answerList=answer_list,
+            aiAnalysis=build_result_analysis(report),
+        )
+    )

@@ -4,14 +4,14 @@ from app.schemas.common import ResponseModel
 
 class LoginRequest(BaseModel):
     account: str = Field(..., min_length=1, max_length=100)
-    password: str = Field(..., min_length=6, max_length=100)
+    password: str = Field(..., min_length=6, max_length=10)
 
 
 class StudentRegisterRequest(BaseModel):
     student_no: str = Field(..., min_length=1, max_length=50)
     real_name: str = Field(..., min_length=1, max_length=50)
     phone: str = Field(..., min_length=1, max_length=20)
-    password: str = Field(..., min_length=6, max_length=100)
+    password: str = Field(..., min_length=6, max_length=10)
     sms_code: str = Field(..., min_length=4, max_length=10)
 
 
@@ -19,13 +19,19 @@ class TeacherRegisterRequest(BaseModel):
     teacher_no: str = Field(..., min_length=1, max_length=50)
     real_name: str = Field(..., min_length=1, max_length=50)
     phone: str = Field(..., min_length=1, max_length=20)
-    password: str = Field(..., min_length=6, max_length=100)
+    password: str = Field(..., min_length=6, max_length=10)
     invite_code: str = Field(..., min_length=1, max_length=100)
     sms_code: str = Field(..., min_length=4, max_length=10)
 
 
 class SendSmsCodeRequest(BaseModel):
     phone: str = Field(..., min_length=11, max_length=20)
+
+
+class ForgotPasswordRequest(BaseModel):
+    username: str = Field(..., min_length=1, max_length=50)
+    realName: str = Field(..., min_length=1, max_length=50)
+    newPassword: str = Field(..., min_length=6, max_length=10)
 
 
 class SendSmsCodeResponse(BaseModel):

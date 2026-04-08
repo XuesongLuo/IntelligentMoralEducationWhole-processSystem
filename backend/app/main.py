@@ -9,6 +9,7 @@ from app.models.auth_user import AuthUser  # noqa: F401
 from app.models.student_user import StudentUser  # noqa: F401
 from app.models.teacher_user import TeacherUser  # noqa: F401
 from app.models.student_roster import StudentRoster  # noqa: F401
+from app.models.teacher_roster import TeacherRoster  # noqa: F401
 from app.models.teacher_invite import TeacherInvite  # noqa: F401
 
 from app.models.resource_category import ResourceCategory  # noqa: F401
