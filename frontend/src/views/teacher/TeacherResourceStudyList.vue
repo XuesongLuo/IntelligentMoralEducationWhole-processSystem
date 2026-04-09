@@ -7,8 +7,13 @@
       @toggle="toggleSidebar"
       @select-user="handleSelectUser"
     />
+    <div
+      v-if="!sidebarCollapsed"
+      class="page-mask"
+      @click="toggleSidebar"
+    />
 
-    <div class="content">
+    <div class="content" :class="{ dimmed: !sidebarCollapsed }">
       <div class="page-top">
         <el-button class="back-btn" type="primary" plain @click="goBack">
           返回资源学习
@@ -420,5 +425,22 @@ onBeforeUnmount(() => {
     width: 100%;
     justify-content: space-between;
   }
+}
+.page-mask {
+  position: fixed;
+  inset: 64px 0 0 0;
+  z-index: 1500;
+  background: rgba(18, 30, 48, 0.28);
+  backdrop-filter: blur(2px);
+}
+.teacher-page {
+  position: relative;
+}
+.content {
+  position: relative;
+  z-index: 1200;
+}
+.content.dimmed {
+  filter: brightness(0.88);
 }
 </style>

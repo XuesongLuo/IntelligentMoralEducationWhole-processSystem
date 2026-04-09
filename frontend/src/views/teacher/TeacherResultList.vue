@@ -7,8 +7,13 @@
       @toggle="toggleSidebar"
       @select-user="handleSelectUser"
     />
+    <div
+      v-if="!sidebarCollapsed"
+      class="page-mask"
+      @click="toggleSidebar"
+    />
 
-    <div class="content" :class="{ expand: sidebarCollapsed }">
+    <div class="content" :class="{ expand: sidebarCollapsed, dimmed: !sidebarCollapsed }">
       <div class="main-box">
         <h1>结果查看</h1>
 
@@ -193,5 +198,22 @@ h1 {
   margin-top: 24px;
   display: flex;
   justify-content: center;
+}
+.page-mask {
+  position: fixed;
+  inset: 64px 0 0 0;
+  z-index: 1500;
+  background: rgba(18, 30, 48, 0.28);
+  backdrop-filter: blur(2px);
+}
+.teacher-page {
+  position: relative;
+}
+.content {
+  position: relative;
+  z-index: 1200;
+}
+.content.dimmed {
+  filter: brightness(0.88);
 }
 </style>

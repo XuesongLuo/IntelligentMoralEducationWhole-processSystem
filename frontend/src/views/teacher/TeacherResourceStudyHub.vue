@@ -7,8 +7,13 @@
       @toggle="toggleSidebar"
       @select-user="handleSelectUser"
     />
+    <div
+      v-if="!sidebarCollapsed"
+      class="page-mask"
+      @click="toggleSidebar"
+    />
 
-    <div class="content" :class="{ expand: sidebarCollapsed }">
+    <div class="content" :class="{ expand: sidebarCollapsed, dimmed: !sidebarCollapsed }">
       <div class="page-top">
         <el-button class="back-btn" type="primary" plain @click="goBack">
           返回主页
@@ -339,5 +344,22 @@ onBeforeUnmount(() => {
   .hub-grid {
     grid-template-columns: 1fr;
   }
+}
+.page-mask {
+  position: fixed;
+  inset: 64px 0 0 0;
+  z-index: 1500;
+  background: rgba(18, 30, 48, 0.28);
+  backdrop-filter: blur(2px);
+}
+.teacher-page {
+  position: relative;
+}
+.content {
+  position: relative;
+  z-index: 1200;
+}
+.content.dimmed {
+  filter: brightness(0.88);
 }
 </style>

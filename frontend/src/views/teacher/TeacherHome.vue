@@ -7,10 +7,13 @@
       @toggle="toggleSidebar"
       @select-user="handleSelectUser"
     />
+    <div
+      v-if="!sidebarCollapsed"
+      class="page-mask"
+      @click="toggleSidebar"
+    />
 
-
-
-    <div class="content" :class="{ expand: sidebarCollapsed }">
+    <div class="content" :class="{ expand: sidebarCollapsed, dimmed: !sidebarCollapsed }">
       <el-card class="overview-card" shadow="never">
         <div class="overview-grid">
           <div class="left-panel">
@@ -366,5 +369,22 @@ onMounted(async () => {
 .nav-btn.disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.page-mask {
+  position: fixed;
+  inset: 64px 0 0 0;
+  z-index: 1500;
+  background: rgba(18, 30, 48, 0.28);
+  backdrop-filter: blur(2px);
+}
+.teacher-page {
+  position: relative;
+}
+.content {
+  position: relative;
+  z-index: 1200;
+}
+.content.dimmed {
+  filter: brightness(0.88);
 }
 </style>
