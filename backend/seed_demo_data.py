@@ -41,34 +41,34 @@ CATEGORY_DATA = [
 
 RESOURCE_DATA = {
     "doctor_patient_dispute": [
-        {"title": "医患纠纷案例分析一", "url": "https://example.com/resource/doctor-patient-1"},
-        {"title": "医患沟通技巧训练", "url": "https://example.com/resource/doctor-patient-2"},
-        {"title": "临床冲突处置流程", "url": "https://example.com/resource/doctor-patient-3"},
+        {"title": "医患纠纷案例分析", "url": "https://www.bilibili.com/video/BV1V1cHe1EsQ?spm_id_from=333.788.videopod.episodes&p=1"},
+        {"title": "医患沟通技巧训练", "url": "https://www.bilibili.com/video/BV1V1cHe1EsQ?spm_id_from=333.788.videopod.episodes&p=27"},
+        {"title": "临床冲突处置流程", "url": "https://www.bilibili.com/video/BV1V1cHe1EsQ?spm_id_from=333.788.videopod.episodes&p=2"},
     ],
     "research_fraud": [
-        {"title": "科研诚信规范导读", "url": "https://example.com/resource/research-1"},
-        {"title": "数据造假典型案例", "url": "https://example.com/resource/research-2"},
-        {"title": "论文署名与引用规范", "url": "https://example.com/resource/research-3"},
+        {"title": "科研诚信规范导读", "url": "https://www.bilibili.com/video/BV1CjmEB3EAk?spm_id_from=333.788.videopod.sections"},
+        {"title": "数据造假典型案例", "url": "https://www.bilibili.com/video/BV1nh4y1S7mC/?spm_id_from=333.337.videopod.sections"},
+        {"title": "论文署名与引用规范", "url": "https://www.bilibili.com/video/BV1eg4y1z7kB/?spm_id_from=333.337.videopod.sections"},
     ],
     "medical_fairness": [
-        {"title": "医疗资源公平分配讨论", "url": "https://example.com/resource/fairness-1"},
-        {"title": "稀缺床位分配案例", "url": "https://example.com/resource/fairness-2"},
-        {"title": "基层与三甲医疗资源对比", "url": "https://example.com/resource/fairness-3"},
+        {"title": "医疗资源公平分配讨论", "url": "https://www.bilibili.com/video/BV1fR4y1d7N5/?spm_id_from=333.337.videopod.sections"},
+        {"title": "稀缺床位分配案例", "url": "https://www.bilibili.com/video/BV1VK411z7ec/?spm_id_from=333.337.videopod.sections"},
+        {"title": "基层与三甲医疗资源对比", "url": "https://www.bilibili.com/video/BV1qp4y157sj/?spm_id_from=333.337.videopod.sections"},
     ],
     "privacy_protection": [
-        {"title": "患者隐私保护规范", "url": "https://example.com/resource/privacy-1"},
-        {"title": "病例信息脱敏基础", "url": "https://example.com/resource/privacy-2"},
-        {"title": "电子病历权限控制", "url": "https://example.com/resource/privacy-3"},
+        {"title": "患者隐私保护规范", "url": "https://www.bilibili.com/video/BV1Y5YPzNEeQ/?spm_id_from=333.337.videopod.sections"},
+        {"title": "病例信息脱敏基础", "url": "https://www.bilibili.com/video/BV1Hh4y197da/?spm_id_from=333.337.videopod.sections"},
+        {"title": "电子病历权限控制", "url": "https://www.bilibili.com/video/BV1p34y1F7U2/?spm_id_from=333.337.videopod.sections"},
     ],
     "teamwork_conflict": [
-        {"title": "医疗团队沟通协作", "url": "https://example.com/resource/teamwork-1"},
-        {"title": "跨学科合作冲突处理", "url": "https://example.com/resource/teamwork-2"},
-        {"title": "值班交接中的责任边界", "url": "https://example.com/resource/teamwork-3"},
+        {"title": "医疗团队沟通协作", "url": "https://www.bilibili.com/video/BV1qce8eWEK2/?spm_id_from=333.337.videopod.sections"},
+        {"title": "跨学科合作冲突处理", "url": "https://www.bilibili.com/video/BV1wQ4y1U7Ko/?spm_id_from=333.337.videopod.sections"},
+        {"title": "值班交接中的责任边界", "url": "https://www.bilibili.com/video/BV1SzWnzSEkW/?spm_id_from=333.337.videopod.sections"},
     ],
     "public_health_response": [
-        {"title": "公共卫生事件应急流程", "url": "https://example.com/resource/public-health-1"},
-        {"title": "突发疫情中的职业伦理", "url": "https://example.com/resource/public-health-2"},
-        {"title": "群体性事件舆情应对", "url": "https://example.com/resource/public-health-3"},
+        {"title": "公共卫生事件应急流程", "url": "https://www.bilibili.com/video/BV1op4y1D7BR/?spm_id_from=333.337.videopod.sections"},
+        {"title": "突发疫情中的职业伦理", "url": "https://www.bilibili.com/video/BV1GE411x7Gk/?spm_id_from=333.337.videopod.sections"},
+        {"title": "群体性事件舆情应对", "url": "https://www.bilibili.com/video/BV1uM4y1i7AB/?spm_id_from=333.337.videopod.sections"},
     ],
 }
 
@@ -76,7 +76,7 @@ USER_DATA = {
     "teacher": {
         "real_name": "李老师",
         "phone": "13900000000",
-        "teacher_no": "T2020007",
+        "teacher_no": "2020007",
         "role": "teacher",
     },
     "student_zhangsan": {
@@ -1109,7 +1109,7 @@ def main():
         db.commit()
 
         print("测试数据写入完成。")
-        print("老师：工号 T2020007 / 手机 13900000000 / 密码 123456")
+        print("老师：工号 2020007 / 手机 13900000000 / 密码 123456")
         print("学生1：学号 20260001 / 手机 13800000000 / 密码 123456")
         print("学生2：学号 20260002 / 手机 13800000001 / 密码 123456")
 
