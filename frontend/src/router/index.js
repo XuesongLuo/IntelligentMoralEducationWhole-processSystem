@@ -12,10 +12,14 @@ import ExamPaper from '@/views/common/ExamPaper.vue'
 import StudentHome from '@/views/student/StudentHome.vue'
 import StudentMoralExamHub from '@/views/student/StudentMoralExamHub.vue'
 import StudentResult from '@/views/student/StudentResultList.vue'
+import StudentResourceStudyHub from '@/views/student/StudentResourceStudyHub.vue'
+import StudentResourceStudyList from '@/views/student/StudentResourceStudyList.vue'
 
 import TeacherHome from '@/views/teacher/TeacherHome.vue'
 import TeacherMoralExamHub from '@/views/teacher/TeacherMoralExamHub.vue'
 import TeacherResult from '@/views/teacher/TeacherResultList.vue'
+import TeacherResourceStudyHub from '@/views/teacher/TeacherResourceStudyHub.vue'
+import TeacherResourceStudyList from '@/views/teacher/TeacherResourceStudyList.vue'
 
 
 
@@ -78,6 +82,17 @@ const routes = [
         path: 'results',
         name: 'StudentResults',
         component: StudentResult
+      },
+      {
+        path: 'resource-study',
+        name: 'StudentResourceStudyHub',
+        component: StudentResourceStudyHub
+      },
+      {
+        path: 'resource-study/:categoryId',
+        name: 'StudentResourceStudyList',
+        component: StudentResourceStudyList,
+        props: true
       }
     ]
   },
@@ -117,6 +132,17 @@ const routes = [
         path: 'results',
         name: 'TeacherResults',
         component: TeacherResult
+      },
+      {
+        path: 'resource-study',
+        name: 'TeacherResourceStudyHub',
+        component: TeacherResourceStudyHub
+      },
+      {
+        path: 'resource-study/:categoryId',
+        name: 'TeacherResourceStudyList',
+        component: TeacherResourceStudyList,
+        props: true
       }
     ]
   },

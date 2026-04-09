@@ -14,6 +14,7 @@ from app.models.auth_user import AuthUser
 from app.models.student_user import StudentUser
 from app.models.teacher_user import TeacherUser
 from app.models.student_roster import StudentRoster
+from app.models.teacher_roster import TeacherRoster
 
 from app.models.resource_category import ResourceCategory
 from app.models.learning_resource import LearningResource
@@ -106,6 +107,28 @@ def get_or_create_student_roster(db: Session, student_no: str, real_name: str) -
 
     roster = StudentRoster(
         student_no=student_no,
+        real_name=real_name,
+        is_enabled=True,
+    )
+    db.add(roster)
+    db.flush()
+    return roster
+
+
+def get_or_create_teacher_roster(db: Session, teacher_no: str, real_name: str) -> TeacherRoster:
+    roster = (
+        db.query(TeacherRoster)
+        .filter(TeacherRoster.teacher_no == teacher_no)
+        .first()
+    )
+    if roster:
+        if roster.real_name != real_name:
+            roster.real_name = real_name
+        roster.is_enabled = True
+        return roster
+
+    roster = TeacherRoster(
+        teacher_no=teacher_no,
         real_name=real_name,
         is_enabled=True,
     )
@@ -1010,6 +1033,11 @@ def main():
             db,
             student_no=USER_DATA["student_lisi"]["student_no"],
             real_name=USER_DATA["student_lisi"]["real_name"],
+        )
+        get_or_create_teacher_roster(
+            db,
+            teacher_no=USER_DATA["teacher"]["teacher_no"],
+            real_name=USER_DATA["teacher"]["real_name"],
         )
         db.commit()
 

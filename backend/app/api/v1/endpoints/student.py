@@ -47,6 +47,17 @@ from app.schemas.exam import (
     SubmitExamResponseData,
     SubmitExamResponseModel,
 )
+from app.schemas.resource import (
+    ResourceCategoryListData,
+    ResourceCategoryListResponseModel,
+    ResourceHeartbeatData,
+    ResourceHeartbeatRequest,
+    ResourceHeartbeatResponseModel,
+    ResourceListItem,
+    ResourceListResponseModel,
+    ResourceVisitData,
+    ResourceVisitResponseModel,
+)
 from app.services.exam_runtime import (
     acquire_submit_lock,
     build_ai_payload,
@@ -55,6 +66,13 @@ from app.services.exam_runtime import (
     finalize_exam_session,
     heartbeat_exam_session,
     release_submit_lock,
+)
+from app.services.resource_runtime import (
+    build_category_progress_list,
+    build_resource_list,
+    get_total_ai_usage_duration,
+    heartbeat_resource_session,
+    mark_resource_completed,
 )
 
 router = APIRouter(prefix="/student", tags=["student"])
@@ -219,54 +237,16 @@ def get_student_home(
         if current_user.student_profile
         else ""
     )
-    categories = (
-        db.query(ResourceCategory)
-        .filter(ResourceCategory.is_enabled == True)
-        .order_by(ResourceCategory.sort_order.asc(), ResourceCategory.id.asc())
-        .all()
-    )
-
-    study_progress_list = []
-
-    for category in categories:
-        total_count = (
-            db.query(func.count(LearningResource.id))
-            .filter(
-                LearningResource.category_id == category.id,
-                LearningResource.is_visible == True,
-            )
-            .scalar()
-            or 0
+    category_progress_items = build_category_progress_list(db, current_user.id)
+    study_progress_list = [
+        StudentHomeProgressItem(
+            id=item.id,
+            name=item.name,
+            progress=item.progress,
+            leftCount=item.remainingCount,
         )
-
-        completed_count = (
-            db.query(func.count(UserResourceRecord.id))
-            .join(
-                LearningResource,
-                LearningResource.id == UserResourceRecord.resource_id,
-            )
-            .filter(
-                UserResourceRecord.user_id == current_user.id,
-                UserResourceRecord.is_completed == True,
-                LearningResource.category_id == category.id,
-                LearningResource.is_visible == True,
-            )
-            .scalar()
-            or 0
-        )
-
-        progress = 0.0
-        if total_count > 0:
-            progress = round(completed_count * 100 / total_count, 1)
-
-        study_progress_list.append(
-            StudentHomeProgressItem(
-                id=category.id,
-                name=category.name,
-                progress=progress,
-                leftCount=max(total_count - completed_count, 0),
-            )
-        )
+        for item in category_progress_items
+    ]
 
     if study_progress_list:
         simulation_completion = round(
@@ -376,12 +356,99 @@ def get_student_home(
         studentId=student_no,
         studentName=current_user.real_name,
         phone=current_user.phone,
+        aiUsageDuration=get_total_ai_usage_duration(db, current_user.id),
         simulationCompletion=simulation_completion,
         studyProgressList=study_progress_list,
         scoreDimensions=score_dimensions,
     )
 
     return StudentHomeResponseModel(data=data)
+
+
+@router.get("/resources/categories", response_model=ResourceCategoryListResponseModel)
+def get_student_resource_categories(
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="only students can access resources")
+
+    items = build_category_progress_list(db, current_user.id)
+    return ResourceCategoryListResponseModel(data=ResourceCategoryListData(items=items))
+
+
+@router.get("/resources/categories/{category_id}/items", response_model=ResourceListResponseModel)
+def get_student_resource_items(
+    category_id: int,
+    pageNum: int = Query(default=1, ge=1),
+    pageSize: int = Query(default=10, ge=1, le=100),
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="only students can access resources")
+
+    try:
+        data = build_resource_list(
+            db,
+            user_id=current_user.id,
+            category_id=category_id,
+            page_num=pageNum,
+            page_size=pageSize,
+            include_hidden=False,
+        )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="resource category not found")
+
+    return ResourceListResponseModel(data=data)
+
+
+@router.post("/resources/heartbeat", response_model=ResourceHeartbeatResponseModel)
+def student_resource_heartbeat(
+    payload: ResourceHeartbeatRequest,
+    current_user: AuthUser = Depends(get_current_user),
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="only students can access resources")
+
+    state = heartbeat_resource_session(current_user.id)
+    return ResourceHeartbeatResponseModel(data=ResourceHeartbeatData(activeSeconds=state["active_seconds"]))
+
+
+@router.post("/resources/{resource_id}/visit", response_model=ResourceVisitResponseModel)
+def visit_student_resource(
+    resource_id: int,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="only students can access resources")
+
+    resource = (
+        db.query(LearningResource)
+        .join(ResourceCategory, ResourceCategory.id == LearningResource.category_id)
+        .filter(
+            LearningResource.id == resource_id,
+            LearningResource.is_visible == True,
+            ResourceCategory.is_enabled == True,
+        )
+        .first()
+    )
+    if not resource:
+        raise HTTPException(status_code=404, detail="resource not found")
+
+    record = mark_resource_completed(db, user_id=current_user.id, resource=resource)
+    db.commit()
+    db.refresh(record)
+
+    return ResourceVisitResponseModel(
+        data=ResourceVisitData(
+            resourceId=resource.id,
+            clickCount=record.click_count,
+            completed=record.is_completed,
+            url=resource.url,
+        )
+    )
 
 
 @router.get("/exam/{exam_type}/notice", response_model=ExamNoticeResponseModel)

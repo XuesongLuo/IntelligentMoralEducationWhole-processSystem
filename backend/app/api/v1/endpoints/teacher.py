@@ -43,6 +43,20 @@ from app.schemas.exam import (
     SubmitExamResponseData,
     SubmitExamResponseModel,
 )
+from app.schemas.resource import (
+    ResourceCategoryListData,
+    ResourceCategoryListResponseModel,
+    ResourceHeartbeatData,
+    ResourceHeartbeatRequest,
+    ResourceHeartbeatResponseModel,
+    ResourceItemResponseModel,
+    ResourceListItem,
+    ResourceListResponseModel,
+    ResourceUpsertRequest,
+    ResourceVisibilityRequest,
+    ResourceVisitData,
+    ResourceVisitResponseModel,
+)
 from app.services.exam_runtime import (
     acquire_submit_lock,
     build_ai_payload,
@@ -51,6 +65,13 @@ from app.services.exam_runtime import (
     finalize_exam_session,
     heartbeat_exam_session,
     release_submit_lock,
+)
+from app.services.resource_runtime import (
+    build_category_progress_list,
+    build_resource_list,
+    get_total_ai_usage_duration,
+    heartbeat_resource_session,
+    mark_resource_completed,
 )
 from app.schemas.student import (
     StudentHomeData,
@@ -217,48 +238,16 @@ def build_home_data(target_user: AuthUser, db: Session) -> StudentHomeData:
         else ""
     )
 
-    categories = (
-        db.query(ResourceCategory)
-        .filter(ResourceCategory.is_enabled == True)
-        .order_by(ResourceCategory.sort_order.asc(), ResourceCategory.id.asc())
-        .all()
-    )
-
-    study_progress_list = []
-    for category in categories:
-        total_count = (
-            db.query(func.count(LearningResource.id))
-            .filter(
-                LearningResource.category_id == category.id,
-                LearningResource.is_visible == True,
-            )
-            .scalar()
-            or 0
+    category_progress_items = build_category_progress_list(db, target_user.id)
+    study_progress_list = [
+        StudentHomeProgressItem(
+            id=item.id,
+            name=item.name,
+            progress=item.progress,
+            leftCount=item.remainingCount,
         )
-
-        completed_count = (
-            db.query(func.count(UserResourceRecord.id))
-            .join(LearningResource, LearningResource.id == UserResourceRecord.resource_id)
-            .filter(
-                UserResourceRecord.user_id == target_user.id,
-                UserResourceRecord.is_completed == True,
-                LearningResource.category_id == category.id,
-                LearningResource.is_visible == True,
-            )
-            .scalar()
-            or 0
-        )
-
-        progress = round(completed_count * 100 / total_count, 1) if total_count > 0 else 0.0
-
-        study_progress_list.append(
-            StudentHomeProgressItem(
-                id=category.id,
-                name=category.name,
-                progress=progress,
-                leftCount=max(total_count - completed_count, 0),
-            )
-        )
+        for item in category_progress_items
+    ]
 
     simulation_completion = (
         round(sum(item.progress for item in study_progress_list) / len(study_progress_list), 1)
@@ -300,6 +289,7 @@ def build_home_data(target_user: AuthUser, db: Session) -> StudentHomeData:
         studentId=user_no,
         studentName=target_user.real_name,
         phone=target_user.phone,
+        aiUsageDuration=get_total_ai_usage_duration(db, target_user.id),
         simulationCompletion=simulation_completion,
         studyProgressList=study_progress_list,
         scoreDimensions=score_dimensions,
@@ -372,6 +362,225 @@ def get_teacher_home(
             raise HTTPException(status_code=404, detail="目标用户不存在")
 
     return StudentHomeResponseModel(data=build_home_data(target_user, db))
+
+
+@router.get("/resources/categories", response_model=ResourceCategoryListResponseModel)
+def get_teacher_resource_categories(
+    userId: int | None = Query(default=None),
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can access resources")
+
+    target_user = current_user
+    if userId and userId != current_user.id:
+        target_user = db.query(AuthUser).filter(AuthUser.id == userId).first()
+        if not target_user:
+            raise HTTPException(status_code=404, detail="target user not found")
+
+    items = build_category_progress_list(db, target_user.id)
+    return ResourceCategoryListResponseModel(data=ResourceCategoryListData(items=items))
+
+
+@router.get("/resources/categories/{category_id}/items", response_model=ResourceListResponseModel)
+def get_teacher_resource_items(
+    category_id: int,
+    userId: int | None = Query(default=None),
+    pageNum: int = Query(default=1, ge=1),
+    pageSize: int = Query(default=10, ge=1, le=100),
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can access resources")
+
+    target_user = current_user
+    if userId and userId != current_user.id:
+        target_user = db.query(AuthUser).filter(AuthUser.id == userId).first()
+        if not target_user:
+            raise HTTPException(status_code=404, detail="target user not found")
+
+    try:
+        data = build_resource_list(
+            db,
+            user_id=target_user.id,
+            category_id=category_id,
+            page_num=pageNum,
+            page_size=pageSize,
+            include_hidden=True,
+        )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="resource category not found")
+
+    return ResourceListResponseModel(data=data)
+
+
+@router.post("/resources/heartbeat", response_model=ResourceHeartbeatResponseModel)
+def teacher_resource_heartbeat(
+    payload: ResourceHeartbeatRequest,
+    current_user: AuthUser = Depends(get_current_user),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can access resources")
+
+    state = heartbeat_resource_session(current_user.id)
+    return ResourceHeartbeatResponseModel(data=ResourceHeartbeatData(activeSeconds=state["active_seconds"]))
+
+
+@router.post("/resources/{resource_id}/visit", response_model=ResourceVisitResponseModel)
+def visit_teacher_resource(
+    resource_id: int,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can access resources")
+
+    resource = (
+        db.query(LearningResource)
+        .join(ResourceCategory, ResourceCategory.id == LearningResource.category_id)
+        .filter(
+            LearningResource.id == resource_id,
+            LearningResource.is_visible == True,
+            ResourceCategory.is_enabled == True,
+        )
+        .first()
+    )
+    if not resource:
+        raise HTTPException(status_code=404, detail="resource not found")
+
+    record = mark_resource_completed(db, user_id=current_user.id, resource=resource)
+    db.commit()
+    db.refresh(record)
+
+    return ResourceVisitResponseModel(
+        data=ResourceVisitData(
+            resourceId=resource.id,
+            clickCount=record.click_count,
+            completed=record.is_completed,
+            url=resource.url,
+        )
+    )
+
+
+@router.post("/resources/categories/{category_id}/items", response_model=ResourceItemResponseModel)
+def create_teacher_resource(
+    category_id: int,
+    payload: ResourceUpsertRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage resources")
+
+    category = (
+        db.query(ResourceCategory)
+        .filter(
+            ResourceCategory.id == category_id,
+            ResourceCategory.is_enabled == True,
+        )
+        .first()
+    )
+    if not category:
+        raise HTTPException(status_code=404, detail="resource category not found")
+
+    max_sort_order = (
+        db.query(func.coalesce(func.max(LearningResource.sort_order), 0))
+        .filter(LearningResource.category_id == category.id)
+        .scalar()
+        or 0
+    )
+
+    resource = LearningResource(
+        category_id=category.id,
+        title=payload.title.strip(),
+        url=payload.url.strip(),
+        sort_order=int(max_sort_order) + 1,
+        is_visible=True,
+        created_by_user_id=current_user.id,
+        updated_by_user_id=current_user.id,
+    )
+    db.add(resource)
+    db.commit()
+    db.refresh(resource)
+
+    return ResourceItemResponseModel(
+        data=ResourceListItem(
+            id=resource.id,
+            title=resource.title,
+            url=resource.url,
+            isVisible=resource.is_visible,
+            completed=False,
+            clickCount=0,
+            lastClickedAt="",
+        )
+    )
+
+
+@router.put("/resources/{resource_id}", response_model=ResourceItemResponseModel)
+def update_teacher_resource(
+    resource_id: int,
+    payload: ResourceUpsertRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage resources")
+
+    resource = db.query(LearningResource).filter(LearningResource.id == resource_id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="resource not found")
+
+    resource.title = payload.title.strip()
+    resource.url = payload.url.strip()
+    resource.updated_by_user_id = current_user.id
+    db.commit()
+    db.refresh(resource)
+
+    return ResourceItemResponseModel(
+        data=ResourceListItem(
+            id=resource.id,
+            title=resource.title,
+            url=resource.url,
+            isVisible=resource.is_visible,
+            completed=False,
+            clickCount=0,
+            lastClickedAt="",
+        )
+    )
+
+
+@router.patch("/resources/{resource_id}/visibility", response_model=ResourceItemResponseModel)
+def update_teacher_resource_visibility(
+    resource_id: int,
+    payload: ResourceVisibilityRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage resources")
+
+    resource = db.query(LearningResource).filter(LearningResource.id == resource_id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="resource not found")
+
+    resource.is_visible = payload.isVisible
+    resource.updated_by_user_id = current_user.id
+    db.commit()
+    db.refresh(resource)
+
+    return ResourceItemResponseModel(
+        data=ResourceListItem(
+            id=resource.id,
+            title=resource.title,
+            url=resource.url,
+            isVisible=resource.is_visible,
+            completed=False,
+            clickCount=0,
+            lastClickedAt="",
+        )
+    )
 
 
 @router.get("/exam/{exam_type}/notice", response_model=ExamNoticeResponseModel)

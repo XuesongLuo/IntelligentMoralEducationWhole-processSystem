@@ -171,8 +171,7 @@ function goResults() {
 }
 
 function goStudy() {
-  ElMessage.info('德育资源学习页面开发中')
-  //router.push('/teacher/resource-study')
+  router.push('/teacher/resource-study')
 }
 
 async function loadData() {
