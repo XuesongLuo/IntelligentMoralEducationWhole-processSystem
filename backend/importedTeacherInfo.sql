@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS teacher_roster (
 
 INSERT INTO teacher_roster (teacher_no, real_name, is_enabled)
 VALUES
-    ('T2020007', '李老师', 1),
-    ('T2020008', '王老师', 1),
-    ('T2020009', '赵老师', 1),
-    ('T2020010', '孙老师', 0);
+    ('2020007', '李老师', 1),
+    ('2020008', '王老师', 1),
+    ('2020009', '赵老师', 1),
+    ('2020010', '孙老师', 0);
