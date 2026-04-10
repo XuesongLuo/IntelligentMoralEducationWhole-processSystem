@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 
 import Login from '@/views/auth/LoginView.vue'
 import Register from '@/views/auth/RegisterView.vue'
@@ -21,10 +22,14 @@ import TeacherResult from '@/views/teacher/TeacherResultList.vue'
 import TeacherResourceStudyHub from '@/views/teacher/TeacherResourceStudyHub.vue'
 import TeacherResourceStudyList from '@/views/teacher/TeacherResourceStudyList.vue'
 
-
-
 import { useTeacherViewStore } from '@/stores/teacherView'
-
+import {
+  buildExamPaperPath,
+  getActiveExamSession,
+  isExamEntryRoute,
+  isExamPaperRoute,
+  shouldShowActiveExamNotice
+} from '@/utils/examSession'
 
 const routes = [
   {
@@ -49,8 +54,6 @@ const routes = [
     component: ForgotPassword,
     meta: { public: true }
   },
-
-  // 学生端
   {
     path: '/student',
     component: AppLayout,
@@ -96,8 +99,6 @@ const routes = [
       }
     ]
   },
-
-  // 教师端
   {
     path: '/teacher',
     component: AppLayout,
@@ -146,7 +147,6 @@ const routes = [
       }
     ]
   },
-
   {
     path: '/:pathMatch(.*)*',
     redirect: '/login'
@@ -161,18 +161,16 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   const token = localStorage.getItem('token')
+  const activeExamSession = getActiveExamSession()
 
-  // 1. 公共页面直接放行
   if (to.meta.public) {
     return next()
   }
 
-  // 2. 需要登录但没登录，回登录页
   if (to.meta.requiresAuth && !token) {
     return next('/login')
   }
 
-  // 3. 角色校验
   if (to.meta.role) {
     const currentRole = userInfo.role
     if (!currentRole) {
@@ -187,23 +185,29 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 4. 老师端考试权限校验：只有查看自己时才能进入
+  if (
+    token &&
+    activeExamSession &&
+    activeExamSession.userId === userInfo.id &&
+    activeExamSession.role === userInfo.role
+  ) {
+    const activeExamPath = buildExamPaperPath(activeExamSession)
+    if (to.path !== activeExamPath && isExamEntryRoute(to, userInfo.role)) {
+      ElMessage.warning('你有未完成的考试，已为你恢复到当前考试页面')
+      return next(activeExamPath)
+    }
+  }
+
   if (to.meta.teacherSelfOnly) {
     const teacherViewStore = useTeacherViewStore()
-
-    // 优先从 store 读
     let isViewingSelf = teacherViewStore.isViewingSelf
 
-    // 如果刷新后 store 丢了，就从 localStorage 兜底
     if (
       typeof isViewingSelf !== 'boolean' ||
       !teacherViewStore.teacherUser ||
       !teacherViewStore.selectedUser
     ) {
-      const teacherViewState = JSON.parse(
-        localStorage.getItem('teacherViewState') || '{}'
-      )
-
+      const teacherViewState = JSON.parse(localStorage.getItem('teacherViewState') || '{}')
       const teacherUserId = teacherViewState.teacherUser?.id
       const selectedUserId = teacherViewState.selectedUser?.id
 
@@ -219,6 +223,32 @@ router.beforeEach((to, from, next) => {
   }
 
   next()
+})
+
+router.afterEach(to => {
+  const token = localStorage.getItem('token')
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  const activeExamSession = getActiveExamSession()
+
+  if (!activeExamSession) {
+    return
+  }
+
+  const activeExamPath = buildExamPaperPath(activeExamSession)
+  if (to.path === activeExamPath || isExamPaperRoute(to)) {
+    return
+  }
+
+  if (token && activeExamSession.userId === userInfo.id && activeExamSession.role === userInfo.role) {
+    if (shouldShowActiveExamNotice(to.fullPath, activeExamPath)) {
+      ElMessage.warning('还有考试未完成，可从考试入口继续当前考试')
+    }
+    return
+  }
+
+  if (!token && shouldShowActiveExamNotice(to.fullPath, activeExamPath)) {
+    ElMessage.info('你有未完成的考试，登录后可继续作答')
+  }
 })
 
 export default router

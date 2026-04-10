@@ -36,6 +36,8 @@ class ExamPaperData(BaseModel):
     examId: int
     paperName: str
     durationSeconds: int = 3600
+    remainingSeconds: int | None = None
+    sessionMismatch: bool = False
     questions: list[ExamQuestionItem] = []
 
 
@@ -51,6 +53,7 @@ class SubmitExamAnswerItem(BaseModel):
 class SubmitExamRequest(BaseModel):
     examId: int | str
     examType: str
+    clientSessionId: str | None = None
     answers: list[SubmitExamAnswerItem] = []
     forced: bool = False
 
@@ -67,11 +70,13 @@ class SubmitExamResponseModel(ResponseModel):
 class ExamHeartbeatRequest(BaseModel):
     examId: int | str
     examType: str
+    clientSessionId: str | None = None
 
 
 class ExamHeartbeatData(BaseModel):
     activeSeconds: int = 0
     submitted: bool = False
+    remainingSeconds: int = 0
 
 
 class ExamHeartbeatResponseModel(ResponseModel):

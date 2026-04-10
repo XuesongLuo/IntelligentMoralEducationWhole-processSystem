@@ -40,14 +40,15 @@ export function getExamInfo(type) {
 }
 
 // 获取题目
-export function getExamPaper(type, examId) {
+export function getExamPaper(type, examId, clientSessionId) {
   if (USE_MOCK) {
     return mockGetExamPaper(type, examId)
   }
 
   return request({
     url: `${getRolePrefix()}/exam/${type}/paper/${examId}`,
-    method: 'get'
+    method: 'get',
+    params: clientSessionId ? { clientSessionId } : {}
   })
 }
 

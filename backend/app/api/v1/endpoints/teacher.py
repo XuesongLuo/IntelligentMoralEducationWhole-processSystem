@@ -60,6 +60,7 @@ from app.schemas.resource import (
 from app.services.exam_runtime import (
     acquire_submit_lock,
     build_ai_payload,
+    clear_exam_session,
     dispatch_ai_analysis,
     ensure_exam_session,
     finalize_exam_session,
@@ -181,7 +182,44 @@ def get_active_paper(db: Session, exam_type: str) -> AssessmentPaper | None:
     )
 
 
-def build_paper_response(db: Session, paper: AssessmentPaper) -> ExamPaperData:
+def get_fixed_paper_for_user(db: Session, user_id: int, exam_type: str) -> AssessmentPaper:
+    completed_count = (
+        db.query(func.count(AssessmentAttempt.id))
+        .filter(
+            AssessmentAttempt.user_id == user_id,
+            AssessmentAttempt.paper_type == exam_type,
+            AssessmentAttempt.submitted_at.isnot(None),
+        )
+        .scalar()
+        or 0
+    )
+    target_version = 1 if completed_count == 0 else 2
+    active_count = (
+        db.query(func.count(AssessmentPaper.id))
+        .filter(
+            AssessmentPaper.paper_type == exam_type,
+            AssessmentPaper.is_active == True,
+        )
+        .scalar()
+        or 0
+    )
+    paper = (
+        db.query(AssessmentPaper)
+        .filter(
+            AssessmentPaper.paper_type == exam_type,
+            AssessmentPaper.version_no == target_version,
+            AssessmentPaper.is_active == True,
+        )
+        .order_by(AssessmentPaper.id.asc())
+        .first()
+    )
+    if paper:
+        return paper
+    missing_version = 1 if active_count == 0 else target_version
+    raise HTTPException(status_code=404, detail=f"缺少试卷{missing_version}")
+
+
+def build_paper_response(db: Session, paper: AssessmentPaper, session_state: dict | None = None) -> ExamPaperData:
     questions = (
         db.query(AssessmentQuestion, AssessmentPaperQuestion.sort_order)
         .join(AssessmentPaperQuestion, AssessmentPaperQuestion.question_id == AssessmentQuestion.id)
@@ -194,6 +232,8 @@ def build_paper_response(db: Session, paper: AssessmentPaper) -> ExamPaperData:
         examId=paper.id,
         paperName=paper.title,
         durationSeconds=paper.duration_seconds,
+        remainingSeconds=session_state.get("remaining_seconds") if session_state else paper.duration_seconds,
+        sessionMismatch=session_state.get("session_mismatch", False) if session_state else False,
         questions=[
             ExamQuestionItem(
                 id=question.id,
@@ -603,7 +643,7 @@ def get_teacher_exam_info(
 ):
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="只有老师可以访问考试信息")
-    paper = get_active_paper(db, exam_type)
+    paper = get_fixed_paper_for_user(db, current_user.id, exam_type)
     if not paper:
         raise HTTPException(status_code=404, detail="试卷不存在")
     return ExamInfoResponseModel(
@@ -618,11 +658,14 @@ def get_teacher_exam_info(
 def get_teacher_exam_paper(
     exam_type: str,
     exam_id: int,
+    clientSessionId: str | None = Query(default=None),
     current_user: AuthUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="只有老师可以访问试卷")
+
+    selected_paper = get_fixed_paper_for_user(db, current_user.id, exam_type)
 
     paper = (
         db.query(AssessmentPaper)
@@ -635,9 +678,17 @@ def get_teacher_exam_paper(
     )
     if not paper:
         raise HTTPException(status_code=404, detail="试卷不存在")
+    if paper.id != selected_paper.id:
+        raise HTTPException(status_code=409, detail="当前考试应按固定试卷规则进行")
 
-    ensure_exam_session(current_user.id, paper.id, paper.paper_type, paper.duration_seconds)
-    return ExamPaperResponseModel(data=build_paper_response(db, paper))
+    session_state = ensure_exam_session(
+        current_user.id,
+        paper.id,
+        paper.paper_type,
+        paper.duration_seconds,
+        clientSessionId,
+    )
+    return ExamPaperResponseModel(data=build_paper_response(db, paper, session_state))
 
 
 @router.post("/exam/heartbeat", response_model=ExamHeartbeatResponseModel)
@@ -654,6 +705,8 @@ def teacher_exam_heartbeat(
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail="试卷编号无效")
 
+    selected_paper = get_fixed_paper_for_user(db, current_user.id, payload.examType)
+
     paper = (
         db.query(AssessmentPaper)
         .filter(
@@ -665,12 +718,21 @@ def teacher_exam_heartbeat(
     )
     if not paper:
         raise HTTPException(status_code=404, detail="试卷不存在")
+    if paper.id != selected_paper.id:
+        raise HTTPException(status_code=409, detail="当前考试应按固定试卷规则进行")
 
-    state = heartbeat_exam_session(current_user.id, paper.id, paper.paper_type, paper.duration_seconds)
+    state = heartbeat_exam_session(
+        current_user.id,
+        paper.id,
+        paper.paper_type,
+        paper.duration_seconds,
+        payload.clientSessionId,
+    )
     return ExamHeartbeatResponseModel(
         data=ExamHeartbeatData(
             activeSeconds=state["active_seconds"],
             submitted=state["submitted"],
+            remainingSeconds=state["remaining_seconds"],
         )
     )
 
@@ -689,6 +751,8 @@ def submit_teacher_exam(
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail="试卷编号无效")
 
+    selected_paper = get_fixed_paper_for_user(db, current_user.id, payload.examType)
+
     paper = (
         db.query(AssessmentPaper)
         .filter(
@@ -700,6 +764,8 @@ def submit_teacher_exam(
     )
     if not paper:
         raise HTTPException(status_code=404, detail="试卷不存在")
+    if paper.id != selected_paper.id:
+        raise HTTPException(status_code=409, detail="当前考试应按固定试卷规则进行")
 
     if not acquire_submit_lock(current_user.id, paper.id):
         raise HTTPException(status_code=409, detail="请勿重复提交")
@@ -719,7 +785,13 @@ def submit_teacher_exam(
 
     try:
         try:
-            duration_seconds = finalize_exam_session(current_user.id, paper.id, paper.paper_type, paper.duration_seconds)
+            duration_seconds = finalize_exam_session(
+                current_user.id,
+                paper.id,
+                paper.paper_type,
+                paper.duration_seconds,
+                payload.clientSessionId,
+            )
         except ValueError:
             raise HTTPException(status_code=409, detail="试卷已提交，请勿重复提交")
         submitted_at = datetime.utcnow()
@@ -760,6 +832,7 @@ def submit_teacher_exam(
         )
         db.add(report)
         db.commit()
+        clear_exam_session(current_user.id, paper.id)
 
         payload_json = build_ai_payload(
             attempt=attempt,

@@ -33,10 +33,16 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { getExamPaper, submitExamHeartbeat, submitExamPaper } from '@/api/exam'
 import { useExamTimer } from '@/composables/useExamTimer'
 import QuestionRenderer from '@/components/common/QuestionRenderer.vue'
+import {
+  clearActiveExamSession,
+  getExamClientSessionId,
+  resetExamClientSessionId,
+  setActiveExamSession
+} from '@/utils/examSession'
 
 const route = useRoute()
 const router = useRouter()
@@ -44,6 +50,7 @@ const router = useRouter()
 const type = computed(() => route.params.type)
 const examId = computed(() => route.params.examId)
 const loading = ref(false)
+const submitSucceeded = ref(false)
 let heartbeatTimer = null
 
 const currentRole = computed(() => {
@@ -78,6 +85,25 @@ const { timeText, reset, start, stop } = useExamTimer(0, async () => {
 const currentUser = computed(() => {
   return JSON.parse(localStorage.getItem('userInfo') || '{}')
 })
+const clientSessionId = ref('')
+
+function syncActiveExamSession() {
+  if (!currentUser.value.id || !type.value || !examId.value) return
+  setActiveExamSession({
+    userId: currentUser.value.id,
+    role: currentRole.value,
+    type: type.value,
+    examId: examId.value
+  })
+}
+
+function syncClientSessionId(reset = false) {
+  if (!currentUser.value.id || !type.value || !examId.value) return ''
+  clientSessionId.value = reset
+    ? resetExamClientSessionId(currentUser.value.id, type.value, examId.value)
+    : getExamClientSessionId(currentUser.value.id, type.value, examId.value)
+  return clientSessionId.value
+}
 // 答题缓存--key
 const draftKey = computed(() => {
   return `exam_draft_${currentUser.value.id}_${type.value}_${examId.value}`
@@ -87,7 +113,8 @@ const deadlineAt = ref(null)
 const restoredRemainingSeconds = ref(null)
 const heartbeatPayload = computed(() => ({
   examId: paperData.value.examId || examId.value,
-  examType: type.value
+  examType: type.value,
+  clientSessionId: clientSessionId.value
 }))
 
 
@@ -132,8 +159,19 @@ function clearDraft() {
   localStorage.removeItem(draftKey.value)
 }
 
+function resetAnswerMap() {
+  Object.keys(answerMap).forEach(key => {
+    delete answerMap[key]
+  })
+}
+
 function handleContextMenu(event) {
   event.preventDefault()
+}
+
+function handlePopState() {
+  window.history.pushState({ examLocked: true }, '', route.fullPath)
+  ElMessage.warning('考试进行中，请先完成或提交后再离开当前页面')
 }
 
 async function sendHeartbeat(options = {}) {
@@ -162,7 +200,11 @@ async function sendHeartbeat(options = {}) {
   }
 
   try {
-    await submitExamHeartbeat(payload)
+    const res = await submitExamHeartbeat(payload)
+    const remainingSeconds = res?.data?.remainingSeconds
+    if (typeof remainingSeconds === 'number' && remainingSeconds >= 0) {
+      deadlineAt.value = Date.now() + remainingSeconds * 1000
+    }
   } catch (error) {
     console.error('发送考试心跳失败：', error)
   }
@@ -200,13 +242,24 @@ async function loadPaper() {
   loading.value = true
   restoredRemainingSeconds.value = null
   try {
-    const res = await getExamPaper(type.value, examId.value)
+    syncClientSessionId()
+    const res = await getExamPaper(type.value, examId.value, clientSessionId.value)
     paperData.value = res.data
-
-    restoreDraft(paperData.value.questions || [])
+    syncActiveExamSession()
+    if (paperData.value.sessionMismatch) {
+      clearDraft()
+      resetAnswerMap()
+      ElMessage.warning('检测到你更换了设备，本次考试将重新作答，但剩余时间保持不变')
+    } else {
+      restoreDraft(paperData.value.questions || [])
+    }
     initAnswers(paperData.value.questions || [])
 
     if (restoredRemainingSeconds.value !== null) {
+      const serverRemainingSeconds = paperData.value.remainingSeconds
+      if (typeof serverRemainingSeconds === 'number') {
+        restoredRemainingSeconds.value = Math.min(restoredRemainingSeconds.value, serverRemainingSeconds)
+      }
       if (restoredRemainingSeconds.value <= 0) {
         ElMessage.warning('考试时间已结束，系统将自动提交。')
         await handleSubmit(true)
@@ -214,7 +267,7 @@ async function loadPaper() {
       }
       reset(restoredRemainingSeconds.value)
     } else {
-      const totalSeconds = paperData.value.durationSeconds || 3600
+      const totalSeconds = paperData.value.remainingSeconds ?? (paperData.value.durationSeconds || 3600)
       deadlineAt.value = Date.now() + totalSeconds * 1000
       reset(totalSeconds)
       saveDraft()
@@ -269,6 +322,7 @@ async function handleSubmit(force) {
     const payload = {
       examId: paperData.value.examId,
       examType: type.value,
+      clientSessionId: clientSessionId.value,
       answers: Object.keys(answerMap).map(questionId => ({
         questionId,
         answer: answerMap[questionId]
@@ -277,11 +331,19 @@ async function handleSubmit(force) {
     }
 
     await submitExamPaper(payload)
+    submitSucceeded.value = true
+    clearActiveExamSession()
     clearDraft()
     stopHeartbeat()
     stop()
     ElMessage.success(force ? '已自动提交' : '提交成功')
-    router.replace(`${routePrefix.value}/moral-exam`)
+    router.replace(`${routePrefix.value}/home`)
+  } catch (error) {
+    const message =
+      error?.response?.data?.detail ||
+      error?.response?.data?.message ||
+      '提交失败，请稍后重试'
+    ElMessage.error(message)
   } finally {
     loading.value = false
   }
@@ -305,17 +367,30 @@ watch(
 )
 
 onMounted(() => {
+  syncActiveExamSession()
+  syncClientSessionId()
   loadPaper()
+  window.history.pushState({ examLocked: true }, '', route.fullPath)
+  window.addEventListener('popstate', handlePopState)
   window.addEventListener('beforeunload', handleBeforeUnload)
   window.addEventListener('contextmenu', handleContextMenu)
+})
+
+onBeforeRouteLeave(() => {
+  if (!submitSucceeded.value) {
+    sendHeartbeat({ keepalive: true })
+  }
 })
 
 onBeforeUnmount(() => {
   stopHeartbeat()
   stop()
+  window.removeEventListener('popstate', handlePopState)
   window.removeEventListener('beforeunload', handleBeforeUnload)
   window.removeEventListener('contextmenu', handleContextMenu)
-  sendHeartbeat({ keepalive: true })
+  if (!submitSucceeded.value) {
+    sendHeartbeat({ keepalive: true })
+  }
 })
 </script>
 

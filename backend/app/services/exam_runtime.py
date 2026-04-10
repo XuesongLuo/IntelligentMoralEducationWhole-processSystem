@@ -36,36 +36,91 @@ def submit_lock_key(user_id: int, paper_id: int) -> str:
     return f"exam:submit-lock:{user_id}:{paper_id}"
 
 
-def ensure_exam_session(user_id: int, paper_id: int, exam_type: str, duration_seconds: int) -> None:
-    key = session_key(user_id, paper_id)
+def _write_exam_session(
+    key: str,
+    paper_id: int,
+    exam_type: str,
+    duration_seconds: int,
+    client_session_id: str | None = None,
+) -> None:
     now = int(time.time())
-    if not redis_client.exists(key):
-        redis_client.hset(
-            key,
-            mapping={
-                "paper_id": paper_id,
-                "exam_type": exam_type,
-                "started_at": now,
-                "last_heartbeat_at": now,
-                "active_seconds": 0,
-                "submitted": 0,
-            },
-        )
+    redis_client.hset(
+        key,
+        mapping={
+            "paper_id": paper_id,
+            "exam_type": exam_type,
+            "started_at": now,
+            "deadline_at": now + max(duration_seconds, 1),
+            "last_heartbeat_at": now,
+            "active_seconds": 0,
+            "submitted": 0,
+            "client_session_id": client_session_id or "",
+        },
+    )
     redis_client.expire(key, max(duration_seconds + 86400, 86400))
 
 
-def heartbeat_exam_session(user_id: int, paper_id: int, exam_type: str, duration_seconds: int) -> dict:
-    ensure_exam_session(user_id, paper_id, exam_type, duration_seconds)
+def ensure_exam_session(
+    user_id: int,
+    paper_id: int,
+    exam_type: str,
+    duration_seconds: int,
+    client_session_id: str | None = None,
+) -> dict:
+    key = session_key(user_id, paper_id)
+    if not redis_client.exists(key):
+        _write_exam_session(key, paper_id, exam_type, duration_seconds, client_session_id)
+        data = redis_client.hgetall(key)
+        return _build_session_state(data, int(time.time()), False)
+
+    data = redis_client.hgetall(key)
+    submitted = str(data.get("submitted", "0")) == "1"
+    cached_exam_type = str(data.get("exam_type", ""))
+    cached_client_session_id = str(data.get("client_session_id", ""))
+    session_mismatch = bool(client_session_id and cached_client_session_id and cached_client_session_id != client_session_id)
+
+    # Re-opening a paper after it was already submitted should create a fresh session.
+    if submitted or cached_exam_type != exam_type:
+        _write_exam_session(key, paper_id, exam_type, duration_seconds, client_session_id)
+        data = redis_client.hgetall(key)
+        return _build_session_state(data, int(time.time()), False)
+
+    if client_session_id and cached_client_session_id != client_session_id:
+        redis_client.hset(key, "client_session_id", client_session_id)
+        data["client_session_id"] = client_session_id
+
+    redis_client.expire(key, max(duration_seconds + 86400, 86400))
+    return _build_session_state(data, int(time.time()), session_mismatch)
+
+
+def _build_session_state(data: dict, now: int, session_mismatch: bool) -> dict:
+    deadline_at = int(data.get("deadline_at", now))
+    remaining_seconds = max(0, deadline_at - now)
+    return {
+        "active_seconds": int(data.get("active_seconds", 0)),
+        "last_heartbeat_at": int(data.get("last_heartbeat_at", now)),
+        "submitted": str(data.get("submitted", "0")) == "1",
+        "remaining_seconds": remaining_seconds,
+        "deadline_at": deadline_at,
+        "client_session_id": str(data.get("client_session_id", "")),
+        "session_mismatch": session_mismatch,
+    }
+
+
+def heartbeat_exam_session(
+    user_id: int,
+    paper_id: int,
+    exam_type: str,
+    duration_seconds: int,
+    client_session_id: str | None = None,
+) -> dict:
+    ensure_exam_session(user_id, paper_id, exam_type, duration_seconds, client_session_id)
     key = session_key(user_id, paper_id)
     now = int(time.time())
     data = redis_client.hgetall(key)
 
     if str(data.get("submitted", "0")) == "1":
-        return {
-            "active_seconds": int(data.get("active_seconds", 0)),
-            "last_heartbeat_at": int(data.get("last_heartbeat_at", now)),
-            "submitted": True,
-        }
+        return _build_session_state(data, now, False)
 
     last_heartbeat_at = int(data.get("last_heartbeat_at", now))
     active_seconds = int(data.get("active_seconds", 0))
@@ -80,16 +135,19 @@ def heartbeat_exam_session(user_id: int, paper_id: int, exam_type: str, duration
         },
     )
     redis_client.expire(key, max(duration_seconds + 86400, 86400))
-
-    return {
-        "active_seconds": active_seconds,
-        "last_heartbeat_at": now,
-        "submitted": False,
-    }
+    data["active_seconds"] = active_seconds
+    data["last_heartbeat_at"] = now
+    return _build_session_state(data, now, False)
 
 
-def finalize_exam_session(user_id: int, paper_id: int, exam_type: str, duration_seconds: int) -> int:
-    state = heartbeat_exam_session(user_id, paper_id, exam_type, duration_seconds)
+def finalize_exam_session(
+    user_id: int,
+    paper_id: int,
+    exam_type: str,
+    duration_seconds: int,
+    client_session_id: str | None = None,
+) -> int:
+    state = heartbeat_exam_session(user_id, paper_id, exam_type, duration_seconds, client_session_id)
     if state["submitted"]:
         raise ValueError("exam already submitted")
     key = session_key(user_id, paper_id)
@@ -103,6 +161,10 @@ def acquire_submit_lock(user_id: int, paper_id: int, expire_seconds: int = 20) -
 
 def release_submit_lock(user_id: int, paper_id: int) -> None:
     redis_client.delete(submit_lock_key(user_id, paper_id))
+
+
+def clear_exam_session(user_id: int, paper_id: int) -> None:
+    redis_client.delete(session_key(user_id, paper_id))
 
 
 def build_ai_payload(
