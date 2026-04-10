@@ -170,7 +170,6 @@ function handleContextMenu(event) {
 }
 
 function handlePopState() {
-  window.history.pushState({ examLocked: true }, '', route.fullPath)
   ElMessage.warning('考试进行中，请先完成或提交后再离开当前页面')
 }
 
@@ -370,15 +369,15 @@ onMounted(() => {
   syncActiveExamSession()
   syncClientSessionId()
   loadPaper()
-  window.history.pushState({ examLocked: true }, '', route.fullPath)
   window.addEventListener('popstate', handlePopState)
   window.addEventListener('beforeunload', handleBeforeUnload)
   window.addEventListener('contextmenu', handleContextMenu)
 })
 
-onBeforeRouteLeave(() => {
-  if (!submitSucceeded.value) {
-    sendHeartbeat({ keepalive: true })
+onBeforeRouteLeave(to => {
+  if (!submitSucceeded.value && to.fullPath !== route.fullPath) {
+    ElMessage.warning('考试进行中，请先完成或提交后再离开当前页面')
+    return false
   }
 })
 

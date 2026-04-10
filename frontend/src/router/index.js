@@ -26,7 +26,6 @@ import { useTeacherViewStore } from '@/stores/teacherView'
 import {
   buildExamPaperPath,
   getActiveExamSession,
-  isExamEntryRoute,
   isExamPaperRoute,
   shouldShowActiveExamNotice
 } from '@/utils/examSession'
@@ -58,6 +57,7 @@ const routes = [
     path: '/student',
     component: AppLayout,
     meta: { requiresAuth: true, role: 'student' },
+    redirect: '/student/home',
     children: [
       {
         path: 'home',
@@ -103,6 +103,7 @@ const routes = [
     path: '/teacher',
     component: AppLayout,
     meta: { requiresAuth: true, role: 'teacher' },
+    redirect: '/teacher/home',
     children: [
       {
         path: 'home',
@@ -163,6 +164,19 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
   const activeExamSession = getActiveExamSession()
 
+  if (
+    token &&
+    activeExamSession &&
+    activeExamSession.userId === userInfo.id &&
+    activeExamSession.role === userInfo.role
+  ) {
+    const activeExamPath = buildExamPaperPath(activeExamSession)
+    if (to.path !== activeExamPath) {
+      ElMessage.warning('你有未完成的考试，当前不能离开考试页面')
+      return next(activeExamPath)
+    }
+  }
+
   if (to.meta.public) {
     return next()
   }
@@ -182,19 +196,6 @@ router.beforeEach((to, from, next) => {
         return next('/teacher/home')
       }
       return next('/student/home')
-    }
-  }
-
-  if (
-    token &&
-    activeExamSession &&
-    activeExamSession.userId === userInfo.id &&
-    activeExamSession.role === userInfo.role
-  ) {
-    const activeExamPath = buildExamPaperPath(activeExamSession)
-    if (to.path !== activeExamPath && isExamEntryRoute(to, userInfo.role)) {
-      ElMessage.warning('你有未完成的考试，已为你恢复到当前考试页面')
-      return next(activeExamPath)
     }
   }
 
