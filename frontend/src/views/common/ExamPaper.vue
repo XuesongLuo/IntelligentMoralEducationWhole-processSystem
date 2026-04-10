@@ -169,10 +169,6 @@ function handleContextMenu(event) {
   event.preventDefault()
 }
 
-function handlePopState() {
-  ElMessage.warning('考试进行中，请先完成或提交后再离开当前页面')
-}
-
 async function sendHeartbeat(options = {}) {
   const payload = heartbeatPayload.value
   if (!payload.examId || !payload.examType) return
@@ -369,14 +365,12 @@ onMounted(() => {
   syncActiveExamSession()
   syncClientSessionId()
   loadPaper()
-  window.addEventListener('popstate', handlePopState)
   window.addEventListener('beforeunload', handleBeforeUnload)
   window.addEventListener('contextmenu', handleContextMenu)
 })
 
 onBeforeRouteLeave(to => {
   if (!submitSucceeded.value && to.fullPath !== route.fullPath) {
-    ElMessage.warning('考试进行中，请先完成或提交后再离开当前页面')
     return false
   }
 })
@@ -384,7 +378,6 @@ onBeforeRouteLeave(to => {
 onBeforeUnmount(() => {
   stopHeartbeat()
   stop()
-  window.removeEventListener('popstate', handlePopState)
   window.removeEventListener('beforeunload', handleBeforeUnload)
   window.removeEventListener('contextmenu', handleContextMenu)
   if (!submitSucceeded.value) {
