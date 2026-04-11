@@ -27,10 +27,14 @@ request.interceptors.response.use(
   error => {
     if (error.response) {
       const status = error.response.status
+      const requestUrl = error.config?.url || ''
+      const hasToken = !!localStorage.getItem('token')
 
-      if (status === 401) {
+      if (status === 401 && hasToken && !requestUrl.includes('/auth/login')) {
         console.error('未登录或登录已过期')
         localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
+        localStorage.removeItem('role')
         window.location.href = '/login'
       } else if (status === 403) {
         console.error('没有权限访问')
