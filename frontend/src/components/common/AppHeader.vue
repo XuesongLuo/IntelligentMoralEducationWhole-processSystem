@@ -6,7 +6,7 @@
       <span class="system-name">{{ systemName }}</span>
     </div>
 
-    <el-dropdown trigger="click" @command="handleCommand">
+    <el-dropdown trigger="click" :disabled="logoutDisabled" @command="handleCommand">
       <button class="account-trigger" type="button">
         <div class="right-box">
           <el-icon><User /></el-icon>

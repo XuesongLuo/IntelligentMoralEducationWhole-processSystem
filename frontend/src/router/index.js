@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { ElMessage } from 'element-plus'
 
 import Login from '@/views/auth/LoginView.vue'
 import Register from '@/views/auth/RegisterView.vue'
@@ -25,8 +24,12 @@ import TeacherResourceStudyList from '@/views/teacher/TeacherResourceStudyList.v
 import { useTeacherViewStore } from '@/stores/teacherView'
 import {
   buildExamPaperPath,
+  EXAM_BLOCKED_MESSAGE,
+  EXAM_LOGIN_RESUME_MESSAGE,
+  EXAM_RESUME_MESSAGE,
   getActiveExamSession,
   isExamPaperRoute,
+  notifyExamWarning,
   shouldShowActiveExamNotice
 } from '@/utils/examSession'
 
@@ -172,7 +175,7 @@ router.beforeEach((to, from, next) => {
   ) {
     const activeExamPath = buildExamPaperPath(activeExamSession)
     if (to.path !== activeExamPath) {
-      ElMessage.warning('你有未完成的考试，当前不能离开考试页面')
+      notifyExamWarning(EXAM_BLOCKED_MESSAGE)
       return next(activeExamPath)
     }
   }
@@ -242,13 +245,13 @@ router.afterEach(to => {
 
   if (token && activeExamSession.userId === userInfo.id && activeExamSession.role === userInfo.role) {
     if (shouldShowActiveExamNotice(to.fullPath, activeExamPath)) {
-      ElMessage.warning('还有考试未完成，可从考试入口继续当前考试')
+      notifyExamWarning(EXAM_RESUME_MESSAGE)
     }
     return
   }
 
   if (!token && shouldShowActiveExamNotice(to.fullPath, activeExamPath)) {
-    ElMessage.info('你有未完成的考试，登录后可继续作答')
+    notifyExamWarning(EXAM_LOGIN_RESUME_MESSAGE)
   }
 })
 

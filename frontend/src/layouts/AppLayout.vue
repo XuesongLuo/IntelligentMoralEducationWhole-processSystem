@@ -16,10 +16,14 @@
 
 <script setup>
 import { computed, onMounted, reactive, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '@/components/common/AppHeader.vue'
-import { getActiveExamSession } from '@/utils/examSession'
+import {
+  EXAM_LOGOUT_BLOCKED_MESSAGE,
+  getActiveExamSession,
+  isExamPaperRoute,
+  notifyExamWarning
+} from '@/utils/examSession'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,6 +51,7 @@ const headerDisplayText = computed(() => {
 const logoutDisabled = computed(() => {
   const activeExamSession = getActiveExamSession()
   return (
+    isExamPaperRoute(route) ||
     !!activeExamSession &&
     activeExamSession.userId === userInfo.id &&
     activeExamSession.role === userInfo.role
@@ -65,7 +70,7 @@ function loadUserInfo() {
 
 function handleLogout() {
   if (logoutDisabled.value) {
-    ElMessage.warning('考试进行中，当前不允许退出账号')
+    notifyExamWarning(EXAM_LOGOUT_BLOCKED_MESSAGE)
     return
   }
 
