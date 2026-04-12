@@ -18,7 +18,7 @@
 
       <el-card class="hub-card" shadow="never">
         <div class="back-row">
-          <el-button @click="goBack">上一页</el-button>
+          <el-button @click="goBack">上一级</el-button>
         </div>
 
         <div class="page-header">
