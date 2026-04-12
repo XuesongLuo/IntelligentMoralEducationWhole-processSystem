@@ -14,18 +14,15 @@
     />
 
     <div class="content" :class="{ expand: sidebarCollapsed, dimmed: !sidebarCollapsed }">
-      <div class="page-top">
-        <el-button class="back-btn" type="primary" plain @click="goBack">
-          返回主页
-        </el-button>
-      </div>
+      <h1>德育资源学习</h1>
 
       <el-card class="hub-card" shadow="never">
+        <div class="back-row">
+          <el-button @click="goBack">上一页</el-button>
+        </div>
+
         <div class="page-header">
-          <h2>德育资源学习</h2>
-          <p>
-            当前查看对象：{{ selectedUserLabel }}
-          </p>
+          <p>当前查看对象：{{ selectedUserLabel }}</p>
         </div>
 
         <div class="hub-grid">
@@ -210,20 +207,21 @@ onBeforeUnmount(() => {
   display: flex;
   min-height: calc(100vh - 64px);
   background: linear-gradient(180deg, #f4f7fb 0%, #edf3ff 100%);
+  position: relative;
 }
 
 .content {
   width: min(1240px, calc(100% - 72px));
-  margin: 0 auto;
-  padding: 24px 20px 40px;
+  margin: 30px auto;
+  position: relative;
+  z-index: 1200;
 }
 
-.page-top {
-  margin-bottom: 18px;
-}
-
-.back-btn {
-  min-width: 132px;
+h1 {
+  margin: 0 0 24px;
+  text-align: center;
+  font-size: 52px;
+  color: #16335b;
 }
 
 .hub-card {
@@ -231,15 +229,13 @@ onBeforeUnmount(() => {
   border: none;
 }
 
+.back-row {
+  margin-bottom: 30px;
+}
+
 .page-header {
   margin-bottom: 28px;
   text-align: center;
-}
-
-.page-header h2 {
-  margin: 0 0 10px;
-  font-size: 34px;
-  color: #16335b;
 }
 
 .page-header p {
@@ -334,17 +330,6 @@ onBeforeUnmount(() => {
   color: #20426e;
 }
 
-@media (max-width: 1180px) {
-  .hub-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 720px) {
-  .hub-grid {
-    grid-template-columns: 1fr;
-  }
-}
 .page-mask {
   position: fixed;
   inset: 64px 0 0 0;
@@ -352,14 +337,28 @@ onBeforeUnmount(() => {
   background: rgba(18, 30, 48, 0.28);
   backdrop-filter: blur(2px);
 }
-.teacher-page {
-  position: relative;
-}
-.content {
-  position: relative;
-  z-index: 1200;
-}
+
 .content.dimmed {
   filter: brightness(0.88);
+}
+
+@media (max-width: 1180px) {
+  .hub-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .content {
+    width: calc(100% - 24px);
+  }
+
+  h1 {
+    font-size: 40px;
+  }
+
+  .hub-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

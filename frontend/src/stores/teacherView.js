@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 export const useTeacherViewStore = defineStore('teacherView', {
   state: () => ({
-    sidebarCollapsed: false,
+    sidebarCollapsed: true,
     teacherUser: null,
     selectedUser: null,
     userList: []
@@ -33,13 +33,14 @@ export const useTeacherViewStore = defineStore('teacherView', {
       this.teacherUser = cache.teacherUser || null
       this.selectedUser = cache.selectedUser || null
       this.userList = cache.userList || []
-      this.sidebarCollapsed = cache.sidebarCollapsed || false
+      this.sidebarCollapsed = typeof cache.sidebarCollapsed === 'boolean' ? cache.sidebarCollapsed : true
     },
 
     init(teacherUser, userList = []) {
       this.teacherUser = teacherUser
       this.selectedUser = teacherUser
       this.userList = userList
+      this.sidebarCollapsed = true
       this.persist()
     },
 
@@ -54,7 +55,7 @@ export const useTeacherViewStore = defineStore('teacherView', {
       this.persist()
     },
     reset() {
-      this.sidebarCollapsed = false
+      this.sidebarCollapsed = true
       this.teacherUser = null
       this.selectedUser = null
       this.userList = []

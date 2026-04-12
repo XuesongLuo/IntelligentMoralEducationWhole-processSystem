@@ -1,16 +1,15 @@
 <template>
   <div class="resource-page">
     <div class="resource-content">
-      <div class="page-top">
-        <el-button class="back-btn" type="primary" plain @click="goBack">
-          返回资源学习
-        </el-button>
-      </div>
+      <h1>{{ categoryName || '德育资源学习' }}</h1>
 
       <el-card class="list-card" shadow="never">
+        <div class="back-row">
+          <el-button @click="goBack">上一页</el-button>
+        </div>
+
         <div class="header-row">
           <div>
-            <h2>{{ categoryName || '德育资源学习' }}</h2>
             <p>点击跳转即可进入外部学习资源，点击过即视为完成。</p>
           </div>
           <div class="summary-chip">
@@ -154,21 +153,23 @@ onBeforeUnmount(() => {
 
 .resource-content {
   width: min(1220px, calc(100% - 48px));
-  margin: 0 auto;
-  padding: 24px 0 40px;
+  margin: 30px auto;
 }
 
-.page-top {
-  margin-bottom: 18px;
-}
-
-.back-btn {
-  min-width: 132px;
+h1 {
+  margin: 0 0 24px;
+  text-align: center;
+  font-size: 52px;
+  color: #16335b;
 }
 
 .list-card {
   border-radius: 28px;
   border: none;
+}
+
+.back-row {
+  margin-bottom: 30px;
 }
 
 .header-row {
@@ -177,12 +178,6 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
-}
-
-.header-row h2 {
-  margin: 0 0 10px;
-  font-size: 34px;
-  color: #16335b;
 }
 
 .header-row p {
@@ -214,6 +209,10 @@ onBeforeUnmount(() => {
 @media (max-width: 720px) {
   .resource-content {
     width: calc(100% - 24px);
+  }
+
+  h1 {
+    font-size: 40px;
   }
 
   .header-row {

@@ -5,7 +5,9 @@
       :logo="userInfo.logo"
       :system-name="systemName"
       :logout-disabled="logoutDisabled"
+      :home-disabled="homeDisabled"
       @logout="handleLogout"
+      @go-home="handleGoHome"
     />
 
     <main class="app-main">
@@ -19,6 +21,7 @@ import { computed, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '@/components/common/AppHeader.vue'
 import {
+  EXAM_BLOCKED_MESSAGE,
   EXAM_LOGOUT_BLOCKED_MESSAGE,
   getActiveExamSession,
   isExamPaperRoute,
@@ -48,15 +51,26 @@ const headerDisplayText = computed(() => {
   return userInfo.student_no || userInfo.real_name || '学号'
 })
 
-const logoutDisabled = computed(() => {
+const hasActiveExam = computed(() => {
   const activeExamSession = getActiveExamSession()
-  return (
-    isExamPaperRoute(route) ||
-    !!activeExamSession &&
+  return Boolean(
+    activeExamSession &&
     activeExamSession.userId === userInfo.id &&
     activeExamSession.role === userInfo.role
   )
 })
+
+const logoutDisabled = computed(() => {
+  return isExamPaperRoute(route) || hasActiveExam.value
+})
+
+const homeDisabled = computed(() => {
+  return isExamPaperRoute(route) || hasActiveExam.value
+})
+
+function getHomePath() {
+  return userInfo.role === 'teacher' ? '/teacher/home' : '/student/home'
+}
 
 function loadUserInfo() {
   const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
@@ -79,6 +93,15 @@ function handleLogout() {
   localStorage.removeItem('role')
   localStorage.removeItem('teacherViewState')
   router.replace('/login')
+}
+
+function handleGoHome() {
+  if (homeDisabled.value) {
+    notifyExamWarning(EXAM_BLOCKED_MESSAGE)
+    return
+  }
+
+  router.push(getHomePath())
 }
 
 watch(

@@ -14,16 +14,15 @@
     />
 
     <div class="content" :class="{ dimmed: !sidebarCollapsed }">
-      <div class="page-top">
-        <el-button class="back-btn" type="primary" plain @click="goBack">
-          返回资源学习
-        </el-button>
-      </div>
+      <h1>{{ categoryName || '德育资源学习' }}</h1>
 
       <el-card class="list-card" shadow="never">
+        <div class="back-row">
+          <el-button @click="goBack">上一页</el-button>
+        </div>
+
         <div class="header-row">
           <div>
-            <h2>{{ categoryName || '德育资源学习' }}</h2>
             <p>当前查看对象：{{ selectedUserLabel }}</p>
           </div>
           <div class="actions-row">
@@ -348,25 +347,30 @@ onBeforeUnmount(() => {
   display: flex;
   min-height: calc(100vh - 64px);
   background: linear-gradient(180deg, #f4f7fb 0%, #edf3ff 100%);
+  position: relative;
 }
 
 .content {
   width: min(1240px, calc(100% - 72px));
-  margin: 0 auto;
-  padding: 24px 20px 40px;
+  margin: 30px auto;
+  position: relative;
+  z-index: 1200;
 }
 
-.page-top {
-  margin-bottom: 18px;
-}
-
-.back-btn {
-  min-width: 132px;
+h1 {
+  margin: 0 0 24px;
+  text-align: center;
+  font-size: 52px;
+  color: #16335b;
 }
 
 .list-card {
   border-radius: 28px;
   border: none;
+}
+
+.back-row {
+  margin-bottom: 30px;
 }
 
 .header-row {
@@ -375,12 +379,6 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 16px;
   margin-bottom: 20px;
-}
-
-.header-row h2 {
-  margin: 0 0 10px;
-  font-size: 34px;
-  color: #16335b;
 }
 
 .header-row p {
@@ -415,7 +413,27 @@ onBeforeUnmount(() => {
   margin-top: 20px;
 }
 
+.page-mask {
+  position: fixed;
+  inset: 64px 0 0 0;
+  z-index: 1500;
+  background: rgba(18, 30, 48, 0.28);
+  backdrop-filter: blur(2px);
+}
+
+.content.dimmed {
+  filter: brightness(0.88);
+}
+
 @media (max-width: 840px) {
+  .content {
+    width: calc(100% - 24px);
+  }
+
+  h1 {
+    font-size: 40px;
+  }
+
   .header-row {
     flex-direction: column;
     align-items: flex-start;
@@ -425,22 +443,5 @@ onBeforeUnmount(() => {
     width: 100%;
     justify-content: space-between;
   }
-}
-.page-mask {
-  position: fixed;
-  inset: 64px 0 0 0;
-  z-index: 1500;
-  background: rgba(18, 30, 48, 0.28);
-  backdrop-filter: blur(2px);
-}
-.teacher-page {
-  position: relative;
-}
-.content {
-  position: relative;
-  z-index: 1200;
-}
-.content.dimmed {
-  filter: brightness(0.88);
 }
 </style>

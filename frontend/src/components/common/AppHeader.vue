@@ -1,16 +1,22 @@
 <template>
   <header class="app-header">
-    <div class="left-box">
+    <button
+      type="button"
+      class="left-box"
+      :class="{ disabled: homeDisabled }"
+      :disabled="homeDisabled"
+      @click="handleGoHome"
+    >
       <img v-if="logo" :src="logo" class="logo-img" alt="logo" />
       <div v-else class="logo-text">LOGO</div>
       <span class="system-name">{{ systemName }}</span>
-    </div>
+    </button>
 
     <el-dropdown trigger="click" :disabled="logoutDisabled" @command="handleCommand">
-      <button class="account-trigger" type="button">
+      <button class="account-trigger" type="button" :disabled="logoutDisabled">
         <div class="right-box">
           <el-icon><User /></el-icon>
-          <span class="username">{{ username || '用户名' }}</span>
+          <span class="username">{{ username || '用户' }}</span>
           <el-icon class="caret"><ArrowDown /></el-icon>
         </div>
       </button>
@@ -44,14 +50,24 @@ const props = defineProps({
   logoutDisabled: {
     type: Boolean,
     default: false
+  },
+  homeDisabled: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['logout'])
+const emit = defineEmits(['logout', 'go-home'])
 
 function handleCommand(command) {
   if (command === 'logout' && !props.logoutDisabled) {
     emit('logout')
+  }
+}
+
+function handleGoHome() {
+  if (!props.homeDisabled) {
+    emit('go-home')
   }
 }
 </script>
@@ -75,17 +91,48 @@ function handleCommand(command) {
   gap: 10px;
 }
 
+.left-box {
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.left-box:hover {
+  background: #f3f6fb;
+}
+
+.left-box.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.left-box.disabled:hover {
+  background: transparent;
+}
+
 .account-trigger {
   border: none;
   background: transparent;
   cursor: pointer;
   padding: 8px 10px;
   border-radius: 999px;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, opacity 0.2s ease;
 }
 
 .account-trigger:hover {
   background: #f3f6fb;
+}
+
+.account-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.account-trigger:disabled:hover {
+  background: transparent;
 }
 
 .logo-img {
