@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON
+from sqlalchemy import DateTime, ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.models.json_text import JSONText
 
 
 class AssessmentAnswer(Base):
@@ -22,6 +23,6 @@ class AssessmentAnswer(Base):
         index=True,
     )
 
-    answer_json: Mapped[dict | list | str | None] = mapped_column(JSON, nullable=True)
+    answer_json: Mapped[dict | list | str | None] = mapped_column(JSONText, nullable=True)
     score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     judged_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
