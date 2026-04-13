@@ -93,7 +93,26 @@ USER_DATA = {
     },
 }
 
-def get_or_create_student_roster(db: Session, student_no: str, real_name: str) -> StudentRoster:
+STUDENT_ROSTER_DATA = [
+    {"student_no": "20260001", "real_name": "张三", "is_enabled": True},
+    {"student_no": "20260002", "real_name": "李四", "is_enabled": True},
+    {"student_no": "20260003", "real_name": "王五", "is_enabled": True},
+    {"student_no": "20260004", "real_name": "赵六", "is_enabled": False},
+]
+
+TEACHER_ROSTER_DATA = [
+    {"teacher_no": "2020007", "real_name": "李老师", "is_enabled": True},
+    {"teacher_no": "2020008", "real_name": "王老师", "is_enabled": True},
+    {"teacher_no": "2020009", "real_name": "赵老师", "is_enabled": True},
+    {"teacher_no": "2020010", "real_name": "孙老师", "is_enabled": True},
+]
+
+def get_or_create_student_roster(
+    db: Session,
+    student_no: str,
+    real_name: str,
+    is_enabled: bool = True,
+) -> StudentRoster:
     roster = (
         db.query(StudentRoster)
         .filter(StudentRoster.student_no == student_no)
@@ -102,20 +121,25 @@ def get_or_create_student_roster(db: Session, student_no: str, real_name: str) -
     if roster:
         if roster.real_name != real_name:
             roster.real_name = real_name
-        roster.is_enabled = True
+        roster.is_enabled = is_enabled
         return roster
 
     roster = StudentRoster(
         student_no=student_no,
         real_name=real_name,
-        is_enabled=True,
+        is_enabled=is_enabled,
     )
     db.add(roster)
     db.flush()
     return roster
 
 
-def get_or_create_teacher_roster(db: Session, teacher_no: str, real_name: str) -> TeacherRoster:
+def get_or_create_teacher_roster(
+    db: Session,
+    teacher_no: str,
+    real_name: str,
+    is_enabled: bool = True,
+) -> TeacherRoster:
     roster = (
         db.query(TeacherRoster)
         .filter(TeacherRoster.teacher_no == teacher_no)
@@ -124,13 +148,13 @@ def get_or_create_teacher_roster(db: Session, teacher_no: str, real_name: str) -
     if roster:
         if roster.real_name != real_name:
             roster.real_name = real_name
-        roster.is_enabled = True
+        roster.is_enabled = is_enabled
         return roster
 
     roster = TeacherRoster(
         teacher_no=teacher_no,
         real_name=real_name,
-        is_enabled=True,
+        is_enabled=is_enabled,
     )
     db.add(roster)
     db.flush()
@@ -1024,21 +1048,20 @@ def main():
         print("开始写入测试数据...")
 
         # 1. 学生名单库
-        get_or_create_student_roster(
-            db,
-            student_no=USER_DATA["student_zhangsan"]["student_no"],
-            real_name=USER_DATA["student_zhangsan"]["real_name"],
-        )
-        get_or_create_student_roster(
-            db,
-            student_no=USER_DATA["student_lisi"]["student_no"],
-            real_name=USER_DATA["student_lisi"]["real_name"],
-        )
-        get_or_create_teacher_roster(
-            db,
-            teacher_no=USER_DATA["teacher"]["teacher_no"],
-            real_name=USER_DATA["teacher"]["real_name"],
-        )
+        for item in STUDENT_ROSTER_DATA:
+            get_or_create_student_roster(
+                db,
+                student_no=item["student_no"],
+                real_name=item["real_name"],
+                is_enabled=item["is_enabled"],
+            )
+        for item in TEACHER_ROSTER_DATA:
+            get_or_create_teacher_roster(
+                db,
+                teacher_no=item["teacher_no"],
+                real_name=item["real_name"],
+                is_enabled=item["is_enabled"],
+            )
         db.commit()
 
         # 2. 创建老师和学生账号
