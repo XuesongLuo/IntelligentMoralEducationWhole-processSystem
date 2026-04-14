@@ -12,6 +12,7 @@
         <div class="module-actions">
           <div class="triangle-btn" @click="goNotice('survey')">画像构建</div>
           <div class="hexagon-btn" @click="goNotice('integrity')">诚信考核</div>
+          <div class="square-btn" @click="goNotice('ideology')">思政考试</div>
         </div>
       </el-card>
     </div>
@@ -61,7 +62,8 @@ h1 {
   gap: 120px;
 }
 .triangle-btn,
-.hexagon-btn {
+.hexagon-btn,
+.square-btn {
   width: 220px;
   height: 220px;
   display: flex;
@@ -79,8 +81,13 @@ h1 {
   clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
   border: 2px solid #333;
 }
+.square-btn {
+  border: 2px solid #333;
+  border-radius: 24px;
+}
 .triangle-btn:hover,
-.hexagon-btn:hover {
+.hexagon-btn:hover,
+.square-btn:hover {
   color: #409eff;
   transform: translateY(-4px);
 }

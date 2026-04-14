@@ -73,7 +73,12 @@ const paperData = ref({
 const answerMap = reactive({})
 
 const pageTitle = computed(() => {
-  return type.value === 'survey' ? '画像构建' : '诚信考核'
+  const pageTitleMap = {
+    survey: '画像构建',
+    integrity: '诚信考核',
+    ideology: '思政考试'
+  }
+  return pageTitleMap[type.value] || '考试'
 })
 
 const { timeText, reset, start, stop } = useExamTimer(0, async () => {
