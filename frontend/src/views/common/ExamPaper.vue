@@ -258,6 +258,8 @@ function showIncompleteQuestionNotice(result) {
     title: '还有未完成题目',
     message: `${result.message}，点击此提示可直接定位`,
     type: 'warning',
+    customClass: 'exam-incomplete-notice',
+    offset: 90,
     duration: 10000,
     onClick: () => {
       scrollToQuestion(result.questionId)
@@ -571,5 +573,13 @@ h1 {
 .submit-row {
   text-align: center;
   margin-top: 24px;
+}
+
+:deep(.exam-incomplete-notice.el-notification) {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  top: 90px !important;
+  min-width: 420px;
 }
 </style>

@@ -107,3 +107,24 @@ export function getExamResultDetail(resultId, userId) {
     params: userId ? { userId } : {}
   })
 }
+
+export function exportExamResult(resultId, userId) {
+  return request({
+    url: `${getRolePrefix()}/exam/results/${resultId}/export`,
+    method: 'get',
+    params: userId ? { userId } : {},
+    responseType: 'blob'
+  })
+}
+
+export function exportExamResultsByType(userId, paperType) {
+  return request({
+    url: `${getRolePrefix()}/exam/results/export/by-type`,
+    method: 'get',
+    params: {
+      userId,
+      paperType
+    },
+    responseType: 'blob'
+  })
+}

@@ -765,6 +765,7 @@ def get_student_exam_results(
         ExamResultListItem(
             id=attempt.id,
             title=paper.title,
+            paperType=paper.paper_type,
             submitTime=format_datetime(attempt.submitted_at),
             durationMinutes=max(int((attempt.duration_seconds or 0) / 60), 0),
             analysisReady=bool(report and report.status == "completed"),

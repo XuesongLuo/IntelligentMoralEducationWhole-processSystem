@@ -87,6 +87,7 @@ class ExamHeartbeatResponseModel(ResponseModel):
 class ExamResultListItem(BaseModel):
     id: int
     title: str
+    paperType: str = ""
     submitTime: str | None = None
     durationMinutes: int = 0
     analysisReady: bool = False
