@@ -14,6 +14,7 @@ from app.core.database import Base, SessionLocal, engine
 from app.models.assessment_paper import AssessmentPaper
 from app.models.assessment_paper_question import AssessmentPaperQuestion
 from app.models.assessment_question import AssessmentQuestion
+from app.models.auth_user import AuthUser  # noqa: F401
 
 
 WORD_NS = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
