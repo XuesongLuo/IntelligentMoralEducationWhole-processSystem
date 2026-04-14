@@ -121,7 +121,30 @@ function formatAnswer(answer) {
   if (answer === true) return '正确'
   if (answer === false) return '错误'
   if (answer === null || answer === undefined || answer === '') return '-'
-  if (typeof answer === 'object') return JSON.stringify(answer)
+  if (typeof answer === 'object') {
+    const selected = Array.isArray(answer.selected)
+      ? answer.selected
+      : answer.selected
+        ? [answer.selected]
+        : []
+    const extras = answer.extras && typeof answer.extras === 'object' ? answer.extras : {}
+
+    if (selected.length) {
+      return selected
+        .map(item => {
+          const extraValue = extras[item]
+          if (Array.isArray(extraValue) && extraValue.length) {
+            return `${item}（补充：${extraValue.filter(Boolean).join('、')}）`
+          }
+          if (typeof extraValue === 'string' && extraValue.trim()) {
+            return `${item}（补充：${extraValue.trim()}）`
+          }
+          return item
+        })
+        .join('；')
+    }
+    return JSON.stringify(answer)
+  }
   return String(answer)
 }
 

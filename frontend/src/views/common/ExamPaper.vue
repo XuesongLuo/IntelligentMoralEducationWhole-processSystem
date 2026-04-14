@@ -32,7 +32,7 @@
 
 <script setup>
 import { computed, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { getExamPaper, submitExamHeartbeat, submitExamPaper } from '@/api/exam'
 import { useExamTimer } from '@/composables/useExamTimer'
@@ -43,6 +43,8 @@ import {
   resetExamClientSessionId,
   setActiveExamSession
 } from '@/utils/examSession'
+
+const BLANK_PATTERN = /_{2,}/g
 
 const route = useRoute()
 const router = useRouter()
@@ -164,9 +166,102 @@ function clearDraft() {
   localStorage.removeItem(draftKey.value)
 }
 
+function countBlanks(text) {
+  return String(text || '').match(BLANK_PATTERN)?.length || 0
+}
+
+function getOptionBlankCounts(question) {
+  const result = {}
+  ;(question.options || []).forEach(opt => {
+    const count = countBlanks(opt.label)
+    if (count > 0) {
+      result[opt.value] = count
+    }
+  })
+  return result
+}
+
+function normalizeChoiceAnswer(answer, multiple = false) {
+  if (answer && typeof answer === 'object' && !Array.isArray(answer)) {
+    return {
+      selected: multiple
+        ? (Array.isArray(answer.selected) ? answer.selected : [])
+        : (answer.selected ?? ''),
+      extras: answer.extras && typeof answer.extras === 'object' ? answer.extras : {}
+    }
+  }
+  return {
+    selected: multiple ? (Array.isArray(answer) ? answer : []) : (answer ?? ''),
+    extras: {}
+  }
+}
+
+function normalizeBlankAnswer(answer, blankCount) {
+  const targetCount = Math.max(blankCount, 1)
+  if (Array.isArray(answer)) {
+    const next = answer.slice(0, targetCount)
+    while (next.length < targetCount) next.push('')
+    return next
+  }
+  if (targetCount === 1) {
+    return [answer ?? '']
+  }
+  return Array.from({ length: targetCount }, () => '')
+}
+
+function hasMissingFilledExtra(question, answer, multiple = false) {
+  const optionBlankCounts = getOptionBlankCounts(question)
+  const normalized = normalizeChoiceAnswer(answer, multiple)
+  const selectedValues = multiple ? normalized.selected : [normalized.selected].filter(Boolean)
+
+  return selectedValues.some(optionValue => {
+    const blankCount = optionBlankCounts[optionValue] || 0
+    if (!blankCount) return false
+    const optionExtras = normalized.extras?.[optionValue]
+    const values = Array.isArray(optionExtras)
+      ? optionExtras
+      : optionExtras !== undefined && optionExtras !== null
+        ? [optionExtras]
+        : []
+    for (let index = 0; index < blankCount; index += 1) {
+      if (!String(values[index] ?? '').trim()) {
+        return true
+      }
+    }
+    return false
+  })
+}
+
 function resetAnswerMap() {
   Object.keys(answerMap).forEach(key => {
     delete answerMap[key]
+  })
+}
+
+function scrollToQuestion(questionId) {
+  const target = document.getElementById(`question-${questionId}`)
+  if (!target) return
+  target.classList.remove('question-focus')
+  void target.offsetWidth
+  target.classList.add('question-focus')
+  target.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
+  })
+  window.setTimeout(() => {
+    target.classList.remove('question-focus')
+  }, 2200)
+}
+
+function showIncompleteQuestionNotice(result) {
+  ElNotification({
+    title: '还有未完成题目',
+    message: `${result.message}，点击此提示可直接定位`,
+    type: 'warning',
+    duration: 10000,
+    onClick: () => {
+      scrollToQuestion(result.questionId)
+    }
   })
 }
 
@@ -225,8 +320,10 @@ function stopHeartbeat() {
 }
 // 设置题目默认答案
 function buildDefaultAnswer(q) {
-  if (q.type === 'multiple') return []
+  if (q.type === 'multiple') return { selected: [], extras: {} }
+  if (q.type === 'single') return { selected: '', extras: {} }
   if (q.type === 'judge') return null
+  if (q.type === 'blank') return normalizeBlankAnswer([], countBlanks(q.title))
   return ''
 }
 function initAnswers(questions = []) {
@@ -281,31 +378,70 @@ async function loadPaper() {
 }
 
 function validateAnswers() {
-  for (const q of paperData.value.questions) {
+  for (const [questionIndex, q] of paperData.value.questions.entries()) {
     const ans = answerMap[q.id]
+    const questionLabel = `第 ${questionIndex + 1} 题`
 
     if (q.type === 'multiple') {
-      if (!Array.isArray(ans) || ans.length === 0) {
-        return `${q.title} 未作答`
+      const normalized = normalizeChoiceAnswer(ans, true)
+      if (!Array.isArray(normalized.selected) || normalized.selected.length === 0) {
+        return {
+          questionId: q.id,
+          message: `${questionLabel} 未作答`
+        }
+      }
+      if (hasMissingFilledExtra(q, ans, true)) {
+        return {
+          questionId: q.id,
+          message: `${questionLabel} 的补充填空未完成`
+        }
+      }
+    } else if (q.type === 'single') {
+      const normalized = normalizeChoiceAnswer(ans, false)
+      if (!normalized.selected) {
+        return {
+          questionId: q.id,
+          message: `${questionLabel} 未作答`
+        }
+      }
+      if (hasMissingFilledExtra(q, ans, false)) {
+        return {
+          questionId: q.id,
+          message: `${questionLabel} 的补充填空未完成`
+        }
       }
     } else if (q.type === 'judge') {
       if (ans !== true && ans !== false) {
-        return `${q.title} 未作答`
+        return {
+          questionId: q.id,
+          message: `${questionLabel} 未作答`
+        }
+      }
+    } else if (q.type === 'blank') {
+      const values = normalizeBlankAnswer(ans, countBlanks(q.title))
+      if (values.some(item => !String(item ?? '').trim())) {
+        return {
+          questionId: q.id,
+          message: `${questionLabel} 未作答`
+        }
       }
     } else {
       if (ans === '' || ans === null || ans === undefined) {
-        return `${q.title} 未作答`
+        return {
+          questionId: q.id,
+          message: `${questionLabel} 未作答`
+        }
       }
     }
   }
-  return ''
+  return null
 }
 // 试卷提交函数
 async function handleSubmit(force) {
   if (!force) {
-    const errorText = validateAnswers()
-    if (errorText) {
-      ElMessage.error(errorText)
+    const validationResult = validateAnswers()
+    if (validationResult) {
+      showIncompleteQuestionNotice(validationResult)
       return
     }
     try {
