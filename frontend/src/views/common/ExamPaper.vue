@@ -575,7 +575,7 @@ h1 {
   margin-top: 24px;
 }
 
-:deep(.exam-incomplete-notice.el-notification) {
+:global(.exam-incomplete-notice.el-notification) {
   left: 50%;
   right: auto;
   transform: translateX(-50%);
