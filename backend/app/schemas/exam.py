@@ -28,6 +28,7 @@ class ExamQuestionOption(BaseModel):
 class ExamQuestionItem(BaseModel):
     id: int
     type: str
+    sectionTitle: str = ""
     title: str
     options: list[ExamQuestionOption] = []
 

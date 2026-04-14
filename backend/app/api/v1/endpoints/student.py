@@ -233,6 +233,7 @@ def build_paper_response(db: Session, paper: AssessmentPaper, session_state: dic
             ExamQuestionItem(
                 id=question.id,
                 type=map_question_type(question.question_type),
+                sectionTitle=question.section_title or "",
                 title=question.title,
                 options=build_question_options(question),
             )

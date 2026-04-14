@@ -27,6 +27,7 @@ class ImportedQuestionRow:
     question_no: int
     question_type: str
     title: str
+    section_title: str = ""
     options: list[str] = field(default_factory=list)
     answer: str = ""
     score: int = 0
@@ -112,6 +113,7 @@ def parse_excel_file(path: Path) -> ImportedPaperSheet:
             ImportedQuestionRow(
                 question_no=int(row_data.get("question_no") or 0),
                 question_type=question_type,
+                section_title=normalize_cell(row_data.get("section_title")),
                 title=title,
                 options=[normalize_cell(row_data.get(header)) for header in option_headers if normalize_cell(row_data.get(header))],
                 answer=normalize_cell(row_data.get("answer")),
@@ -184,6 +186,7 @@ def create_question(db: Session, paper: AssessmentPaper, row: ImportedQuestionRo
     question = AssessmentQuestion(
         paper_type=paper.paper_type,
         question_type=row.question_type,
+        section_title=row.section_title or None,
         title=row.title,
         options_json=build_options_json(row),
         answer_json=build_answer_json(row),

@@ -26,6 +26,7 @@ class ExportQuestion:
     question_no: int
     question_type: str
     title: str
+    section_title: str = ""
     options: list[str] = field(default_factory=list)
     answer: str = ""
     score: int = 0
@@ -130,6 +131,7 @@ def parse_survey_doc(path: Path, title: str, version_no: int) -> ExportPaper:
         source_file=path.name,
     )
     question_no = 1
+    current_section = ""
     pending_prompt: str | None = None
     pending_options: list[str] = []
 
@@ -143,6 +145,7 @@ def parse_survey_doc(path: Path, title: str, version_no: int) -> ExportPaper:
             ExportQuestion(
                 question_no=question_no,
                 question_type=question_type,
+                section_title=current_section,
                 title=pending_prompt,
                 options=list(pending_options),
             )
@@ -152,7 +155,16 @@ def parse_survey_doc(path: Path, title: str, version_no: int) -> ExportPaper:
         pending_options = []
 
     for line in read_docx_lines(path):
-        if not line or is_survey_heading(line):
+        if not line:
+            flush_pending()
+            continue
+
+        if survey_heading_pattern().match(line):
+            flush_pending()
+            current_section = line
+            continue
+
+        if is_survey_heading(line):
             flush_pending()
             continue
 
@@ -171,6 +183,7 @@ def parse_survey_doc(path: Path, title: str, version_no: int) -> ExportPaper:
                     ExportQuestion(
                         question_no=question_no,
                         question_type="fill_blank",
+                        section_title=current_section,
                         title=normalize_question_prompt(line).rstrip("（）"),
                     )
                 )
@@ -195,6 +208,7 @@ def parse_survey_doc(path: Path, title: str, version_no: int) -> ExportPaper:
                 ExportQuestion(
                     question_no=question_no,
                     question_type="fill_blank",
+                    section_title=current_section,
                     title=normalize_question_prompt(line).rstrip("（）"),
                 )
             )
@@ -269,6 +283,7 @@ def parse_exam_doc(path: Path) -> list[ExportPaper]:
     papers: list[ExportPaper] = []
     current_paper: ExportPaper | None = None
     current_question_type: str | None = None
+    current_section = ""
     current_question: ExportQuestion | None = None
     current_question_no = 1
 
@@ -308,6 +323,7 @@ def parse_exam_doc(path: Path) -> list[ExportPaper]:
         if detected_question_type:
             flush_question()
             current_question_type = detected_question_type
+            current_section = re.sub(r"（.*$", "", line).strip()
             continue
 
         if not current_paper or not current_question_type:
@@ -323,6 +339,7 @@ def parse_exam_doc(path: Path) -> list[ExportPaper]:
             current_question = ExportQuestion(
                 question_no=current_question_no,
                 question_type=current_question_type,
+                section_title=current_section,
                 title=clean_exam_question_title(line),
                 options=["对", "错"] if current_question_type == "boolean" else [],
                 score=2,
@@ -404,6 +421,7 @@ def write_single_workbook(output_path: Path, paper: ExportPaper) -> None:
             "version_no",
             "question_no",
             "question_type",
+            "section_title",
             "question_title",
             *OPTION_HEADERS,
             "answer",
@@ -419,6 +437,7 @@ def write_single_workbook(output_path: Path, paper: ExportPaper) -> None:
                 paper.version_no,
                 question.question_no,
                 question.question_type,
+                question.section_title,
                 question.title,
                 *build_option_cells(question.options),
                 question.answer,

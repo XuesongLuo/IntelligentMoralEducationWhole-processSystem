@@ -23,6 +23,7 @@ class AssessmentQuestion(Base):
         index=True,
     )
 
+    section_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     options_json: Mapped[dict | list | None] = mapped_column(JSONText, nullable=True)
     answer_json: Mapped[dict | list | str | None] = mapped_column(JSONText, nullable=True)
