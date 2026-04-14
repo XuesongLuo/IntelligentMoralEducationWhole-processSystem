@@ -332,6 +332,20 @@ def get_active_paper(db: Session, exam_type: str) -> AssessmentPaper | None:
 
 
 def get_fixed_paper_for_user(db: Session, user_id: int, exam_type: str) -> AssessmentPaper:
+    if exam_type in {"integrity", "ideology"}:
+        paper = (
+            db.query(AssessmentPaper)
+            .filter(
+                AssessmentPaper.paper_type == exam_type,
+                AssessmentPaper.is_active == True,
+            )
+            .order_by(func.rand())
+            .first()
+        )
+        if paper:
+            return paper
+        raise HTTPException(status_code=404, detail="缺少试卷1")
+
     completed_count = (
         db.query(func.count(AssessmentAttempt.id))
         .filter(
@@ -366,6 +380,31 @@ def get_fixed_paper_for_user(db: Session, user_id: int, exam_type: str) -> Asses
         return paper
     missing_version = 1 if active_count == 0 else target_version
     raise HTTPException(status_code=404, detail=f"缺少试卷{missing_version}")
+
+
+def resolve_allowed_paper_for_user(
+    db: Session,
+    user_id: int,
+    exam_type: str,
+    exam_id: int,
+) -> AssessmentPaper:
+    paper = (
+        db.query(AssessmentPaper)
+        .filter(
+            AssessmentPaper.id == exam_id,
+            AssessmentPaper.paper_type == exam_type,
+            AssessmentPaper.is_active == True,
+        )
+        .first()
+    )
+    if not paper:
+        raise HTTPException(status_code=404, detail="试卷不存在")
+
+    if exam_type == "survey":
+        selected_paper = get_fixed_paper_for_user(db, user_id, exam_type)
+        if paper.id != selected_paper.id:
+            raise HTTPException(status_code=409, detail="当前考试应按固定试卷规则进行")
+    return paper
 
 
 def build_paper_response(db: Session, paper: AssessmentPaper, session_state: dict | None = None) -> ExamPaperData:
@@ -815,21 +854,7 @@ def get_teacher_exam_paper(
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="只有老师可以访问试卷")
 
-    selected_paper = get_fixed_paper_for_user(db, current_user.id, exam_type)
-
-    paper = (
-        db.query(AssessmentPaper)
-        .filter(
-            AssessmentPaper.id == exam_id,
-            AssessmentPaper.paper_type == exam_type,
-            AssessmentPaper.is_active == True,
-        )
-        .first()
-    )
-    if not paper:
-        raise HTTPException(status_code=404, detail="试卷不存在")
-    if paper.id != selected_paper.id:
-        raise HTTPException(status_code=409, detail="当前考试应按固定试卷规则进行")
+    paper = resolve_allowed_paper_for_user(db, current_user.id, exam_type, exam_id)
 
     session_state = ensure_exam_session(
         current_user.id,
@@ -855,21 +880,7 @@ def teacher_exam_heartbeat(
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail="试卷编号无效")
 
-    selected_paper = get_fixed_paper_for_user(db, current_user.id, payload.examType)
-
-    paper = (
-        db.query(AssessmentPaper)
-        .filter(
-            AssessmentPaper.id == exam_id,
-            AssessmentPaper.paper_type == payload.examType,
-            AssessmentPaper.is_active == True,
-        )
-        .first()
-    )
-    if not paper:
-        raise HTTPException(status_code=404, detail="试卷不存在")
-    if paper.id != selected_paper.id:
-        raise HTTPException(status_code=409, detail="当前考试应按固定试卷规则进行")
+    paper = resolve_allowed_paper_for_user(db, current_user.id, payload.examType, exam_id)
 
     state = heartbeat_exam_session(
         current_user.id,
@@ -901,21 +912,7 @@ def submit_teacher_exam(
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail="试卷编号无效")
 
-    selected_paper = get_fixed_paper_for_user(db, current_user.id, payload.examType)
-
-    paper = (
-        db.query(AssessmentPaper)
-        .filter(
-            AssessmentPaper.id == exam_id,
-            AssessmentPaper.paper_type == payload.examType,
-            AssessmentPaper.is_active == True,
-        )
-        .first()
-    )
-    if not paper:
-        raise HTTPException(status_code=404, detail="试卷不存在")
-    if paper.id != selected_paper.id:
-        raise HTTPException(status_code=409, detail="当前考试应按固定试卷规则进行")
+    paper = resolve_allowed_paper_for_user(db, current_user.id, payload.examType, exam_id)
 
     if not acquire_submit_lock(current_user.id, paper.id):
         raise HTTPException(status_code=409, detail="请勿重复提交")

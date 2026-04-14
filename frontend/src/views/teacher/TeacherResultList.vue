@@ -18,8 +18,9 @@
         <h1>结果查看</h1>
 
         <el-card class="panel" shadow="never">
-          <div class="back-row">
+          <div class="toolbar-row">
             <el-button @click="goBack">上一级</el-button>
+            <el-button type="warning" @click="openBatchExportDialog">一键导出同类型</el-button>
           </div>
           <div class="viewing-row">
             <span>正在查看：{{ selectedUser?.label || '-' }}</span>
@@ -47,7 +48,6 @@
                 </el-button>
                 <span v-else class="status-tip">模型分析中...</span>
                 <el-button type="success" link @click="handleExportOne(row)">导出本次</el-button>
-                <el-button type="warning" link @click="handleExportByType(row)">同类型一键导出</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -71,6 +71,23 @@
       :result-id="currentResultId"
       :user-id="selectedUser?.id"
     />
+
+    <el-dialog
+      v-model="batchExportDialogVisible"
+      title="选择导出类型"
+      width="360px"
+      :close-on-click-modal="false"
+    >
+      <el-radio-group v-model="batchExportType" class="batch-export-type-group">
+        <el-radio value="survey">问卷</el-radio>
+        <el-radio value="integrity">科研诚信试卷</el-radio>
+        <el-radio value="ideology">思政试卷</el-radio>
+      </el-radio-group>
+      <template #footer>
+        <el-button @click="batchExportDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmBatchExport">确认导出</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -93,6 +110,8 @@ const tableData = ref([])
 const total = ref(0)
 const dialogVisible = ref(false)
 const currentResultId = ref('')
+const batchExportDialogVisible = ref(false)
+const batchExportType = ref('survey')
 
 const query = ref({
   pageNum: 1,
@@ -162,11 +181,20 @@ async function handleExportOne(row) {
   }
 }
 
-async function handleExportByType(row) {
-  if (!selectedUser.value?.id || !row.paperType) return
+function openBatchExportDialog() {
+  batchExportType.value = 'survey'
+  batchExportDialogVisible.value = true
+}
+
+async function confirmBatchExport() {
+  if (!selectedUser.value?.id) return
   try {
-    const blob = await exportExamResultsByType(selectedUser.value.id, row.paperType)
-    triggerFileDownload(blob, `${selectedUser.value.label}_${formatPaperType(row.paperType)}_全部导出.xlsx`)
+    const blob = await exportExamResultsByType(selectedUser.value.id, batchExportType.value)
+    triggerFileDownload(
+      blob,
+      `${selectedUser.value.label}_${formatPaperType(batchExportType.value)}_全部导出.xlsx`
+    )
+    batchExportDialogVisible.value = false
     ElMessage.success('导出成功')
   } catch (error) {
     const message = error?.response?.data?.detail || '导出失败，请稍后重试'
@@ -246,8 +274,11 @@ h1 {
   min-height: 560px;
 }
 
-.back-row {
+.toolbar-row {
   margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .viewing-row {
@@ -259,6 +290,12 @@ h1 {
 .status-tip {
   color: #999;
   margin-right: 8px;
+}
+
+.batch-export-type-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .pagination-row {

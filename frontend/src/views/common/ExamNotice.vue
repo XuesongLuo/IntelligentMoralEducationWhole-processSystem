@@ -131,9 +131,10 @@ h1 {
   border: 1px solid #dcdfe6;
   border-radius: 8px;
   padding: 24px;
-  text-align: center;
+  text-align: left;
 }
 .notice-inner p {
   line-height: 2;
+  margin: 0;
 }
 </style>

@@ -59,23 +59,27 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 120px;
+  gap: 84px;
 }
 .triangle-btn,
 .hexagon-btn,
 .square-btn {
-  width: 220px;
-  height: 220px;
+  width: 232px;
+  height: 232px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 40px;
+  text-align: center;
+  font-size: 34px;
+  line-height: 1.25;
+  padding: 16px;
   cursor: pointer;
   transition: all 0.25s;
 }
 .triangle-btn {
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
   border: 2px solid #333;
+  padding-top: 72px;
 }
 .hexagon-btn {
   clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
