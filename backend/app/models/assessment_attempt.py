@@ -23,7 +23,7 @@ class AssessmentAttempt(Base):
     )
 
     paper_type: Mapped[str] = mapped_column(
-        Enum("survey", "integrity", name="attempt_paper_type_enum"),
+        Enum("survey", "integrity", "ideology", name="attempt_paper_type_enum"),
         nullable=False,
         index=True,
     )
