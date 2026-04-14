@@ -13,7 +13,7 @@ from openpyxl.styles import Alignment, Font
 
 WORD_NS = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
 DEFAULT_DOC_ROOT = Path(r"D:\CoWorkProjects\需求分析文档")
-DEFAULT_OUTPUT = Path("assessment_bank_export.xlsx")
+DEFAULT_OUTPUT_DIR = Path("assessment_bank_exports")
 SURVEY_1_NAME = "第一次问卷采集表.docx"
 SURVEY_2_NAME = "第二次问卷采集表.docx"
 EXAM_NAME = "科研考试和思政考试试卷.docx"
@@ -287,6 +287,22 @@ def build_default_papers(doc_root: Path) -> list[ExportPaper]:
     return papers
 
 
+def safe_filename(value: str) -> str:
+    value = value.strip().replace(" ", "_")
+    value = re.sub(r"[\\/:*?\"<>|]", "_", value)
+    return value
+
+
+def build_output_filename(paper: ExportPaper) -> str:
+    prefix_map = {
+        "survey": "问卷",
+        "integrity": "科研诚信试卷",
+        "ideology": "思政试卷",
+    }
+    prefix = prefix_map.get(paper.paper_type, paper.paper_type)
+    return safe_filename(f"{prefix}_第{paper.version_no}份.xlsx")
+
+
 def autofit_sheet(worksheet) -> None:
     for column_cells in worksheet.columns:
         length = 0
@@ -298,40 +314,28 @@ def autofit_sheet(worksheet) -> None:
         worksheet.column_dimensions[column].width = min(max(length + 2, 12), 40)
 
 
-def write_workbook(output_path: Path, papers: list[ExportPaper]) -> None:
+def write_single_workbook(output_path: Path, paper: ExportPaper) -> None:
     workbook = Workbook()
 
     readme = workbook.active
     readme.title = "README"
     readme.append(["说明"])
-    readme.append(["本文件由 docx 题库自动解析生成，请先人工检查 questions 工作表中的题干、题型、选项和分值。"])
-    readme.append(["后续如需正式导入数据库，建议以此 Excel 为唯一准入源。"])
-    readme.append(["paper_type 约定：survey=问卷，integrity=科研诚信考试，ideology=思政考试。"])
-    readme.append(["question_type 约定：single / multiple / boolean / fill_blank。"])
-    readme.append(["answer 列当前默认留空，后续可由你手工补标准答案。"])
+    readme.append(["本文件由 docx 题库自动解析生成，请先人工检查题干、题型、选项、答案和分值。"])
+    readme.append(["如有问题，可直接在 questions 工作表里手动修改。"])
+    readme.append([f"paper_type={paper.paper_type}, title={paper.title}, version_no={paper.version_no}"])
 
-    papers_sheet = workbook.create_sheet("papers")
-    papers_sheet.append(
+    paper_sheet = workbook.create_sheet("paper")
+    paper_sheet.append(["paper_type", "paper_title", "version_no", "duration_seconds", "question_count", "source_file"])
+    paper_sheet.append(
         [
-            "paper_type",
-            "paper_title",
-            "version_no",
-            "duration_seconds",
-            "question_count",
-            "source_file",
+            paper.paper_type,
+            paper.title,
+            paper.version_no,
+            paper.duration_seconds,
+            len(paper.questions),
+            paper.source_file,
         ]
     )
-    for paper in papers:
-        papers_sheet.append(
-            [
-                paper.paper_type,
-                paper.title,
-                paper.version_no,
-                paper.duration_seconds,
-                len(paper.questions),
-                paper.source_file,
-            ]
-        )
 
     questions_sheet = workbook.create_sheet("questions")
     questions_sheet.append(
@@ -351,28 +355,27 @@ def write_workbook(output_path: Path, papers: list[ExportPaper]) -> None:
             "source_file",
         ]
     )
-    for paper in papers:
-        for question in paper.questions:
-            questions_sheet.append(
-                [
-                    paper.paper_type,
-                    paper.title,
-                    paper.version_no,
-                    question.question_no,
-                    question.question_type,
-                    question.title,
-                    question.option_a,
-                    question.option_b,
-                    question.option_c,
-                    question.option_d,
-                    question.answer,
-                    question.score,
-                    paper.source_file,
-                ]
-            )
+    for question in paper.questions:
+        questions_sheet.append(
+            [
+                paper.paper_type,
+                paper.title,
+                paper.version_no,
+                question.question_no,
+                question.question_type,
+                question.title,
+                question.option_a,
+                question.option_b,
+                question.option_c,
+                question.option_d,
+                question.answer,
+                question.score,
+                paper.source_file,
+            ]
+        )
 
     header_font = Font(bold=True)
-    for worksheet in (readme, papers_sheet, questions_sheet):
+    for worksheet in (readme, paper_sheet, questions_sheet):
         for cell in worksheet[1]:
             cell.font = header_font
         worksheet.freeze_panes = "A2"
@@ -382,11 +385,20 @@ def write_workbook(output_path: Path, papers: list[ExportPaper]) -> None:
     workbook.save(output_path)
 
 
-def print_summary(papers: list[ExportPaper], output_path: Path) -> None:
-    print(f"Excel exported to: {output_path}")
-    print("\nPaper summary:")
+def export_workbooks(output_dir: Path, papers: list[ExportPaper]) -> list[Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    exported_paths: list[Path] = []
     for paper in papers:
-        print(f"- {paper.paper_type} v{paper.version_no} {paper.title} | {len(paper.questions)} questions")
+        path = output_dir / build_output_filename(paper)
+        write_single_workbook(path, paper)
+        exported_paths.append(path)
+    return exported_paths
+
+
+def print_summary(exported_paths: list[Path], papers: list[ExportPaper]) -> None:
+    print(f"Exported files: {len(exported_paths)}")
+    for path, paper in zip(exported_paths, papers):
+        print(f"- {path.resolve()} | {paper.paper_type} v{paper.version_no} | {len(paper.questions)} questions")
 
 
 def parse_args() -> argparse.Namespace:
@@ -398,10 +410,10 @@ def parse_args() -> argparse.Namespace:
         help="Folder containing the provided DOCX source files.",
     )
     parser.add_argument(
-        "--output",
+        "--output-dir",
         type=Path,
-        default=DEFAULT_OUTPUT,
-        help="Output .xlsx file path.",
+        default=DEFAULT_OUTPUT_DIR,
+        help="Output directory for generated .xlsx files.",
     )
     return parser.parse_args()
 
@@ -409,8 +421,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     papers = build_default_papers(args.doc_root)
-    write_workbook(args.output, papers)
-    print_summary(papers, args.output.resolve())
+    exported_paths = export_workbooks(args.output_dir, papers)
+    print_summary(exported_paths, papers)
 
 
 if __name__ == "__main__":
