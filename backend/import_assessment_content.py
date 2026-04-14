@@ -14,9 +14,6 @@ from app.core.database import Base, SessionLocal, engine
 from app.models.assessment_paper import AssessmentPaper
 from app.models.assessment_paper_question import AssessmentPaperQuestion
 from app.models.assessment_question import AssessmentQuestion
-from app.models.auth_user import AuthUser
-from app.models.student_user import StudentUser  # noqa: F401
-from app.models.teacher_user import TeacherUser  # noqa: F401
 
 
 WORD_NS = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
@@ -288,16 +285,6 @@ def build_default_papers(doc_root: Path) -> list[ImportedPaper]:
     return papers
 
 
-def get_import_owner_id(db: Session) -> int | None:
-    teacher = (
-        db.query(AuthUser)
-        .filter(AuthUser.role == "teacher")
-        .order_by(AuthUser.id.asc())
-        .first()
-    )
-    return teacher.id if teacher else None
-
-
 def upsert_paper(
     db: Session,
     *,
@@ -510,8 +497,7 @@ def main() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        owner_id = get_import_owner_id(db)
-        summary = import_papers(db, papers, created_by_user_id=owner_id)
+        summary = import_papers(db, papers, created_by_user_id=None)
         db.commit()
         print("Import complete.")
         print_summary(summary)
