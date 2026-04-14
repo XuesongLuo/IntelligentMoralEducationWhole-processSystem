@@ -15,6 +15,8 @@ from app.models.assessment_paper import AssessmentPaper
 from app.models.assessment_paper_question import AssessmentPaperQuestion
 from app.models.assessment_question import AssessmentQuestion
 from app.models.auth_user import AuthUser
+from app.models.student_user import StudentUser  # noqa: F401
+from app.models.teacher_user import TeacherUser  # noqa: F401
 
 
 WORD_NS = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
