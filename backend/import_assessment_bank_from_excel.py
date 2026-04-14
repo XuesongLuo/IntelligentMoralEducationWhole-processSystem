@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -27,10 +27,7 @@ class ImportedQuestionRow:
     question_no: int
     question_type: str
     title: str
-    option_a: str = ""
-    option_b: str = ""
-    option_c: str = ""
-    option_d: str = ""
+    options: list[str] = field(default_factory=list)
     answer: str = ""
     score: int = 0
 
@@ -53,14 +50,11 @@ def normalize_cell(value: Any) -> str:
 
 def build_options_json(row: ImportedQuestionRow) -> list[dict[str, str]] | None:
     options = []
-    for label, text in (
-        ("A", row.option_a),
-        ("B", row.option_b),
-        ("C", row.option_c),
-        ("D", row.option_d),
-    ):
-        if text:
-            options.append({"label": label, "text": text})
+    for index, text in enumerate(row.options):
+        if not text:
+            continue
+        label = chr(ord("A") + index)
+        options.append({"label": label, "text": text})
     return options or None
 
 
@@ -100,6 +94,8 @@ def parse_excel_file(path: Path) -> ImportedPaperSheet:
         raise ValueError(f"{path.name} 的 version_no 非法: {version_no}")
 
     question_headers = [normalize_cell(cell.value) for cell in next(questions_sheet.iter_rows(min_row=1, max_row=1))]
+    option_headers = [header for header in question_headers if header.startswith("option_")]
+
     questions: list[ImportedQuestionRow] = []
     for row in questions_sheet.iter_rows(min_row=2, values_only=True):
         row_data = dict(zip(question_headers, row))
@@ -117,10 +113,7 @@ def parse_excel_file(path: Path) -> ImportedPaperSheet:
                 question_no=int(row_data.get("question_no") or 0),
                 question_type=question_type,
                 title=title,
-                option_a=normalize_cell(row_data.get("option_a")),
-                option_b=normalize_cell(row_data.get("option_b")),
-                option_c=normalize_cell(row_data.get("option_c")),
-                option_d=normalize_cell(row_data.get("option_d")),
+                options=[normalize_cell(row_data.get(header)) for header in option_headers if normalize_cell(row_data.get(header))],
                 answer=normalize_cell(row_data.get("answer")),
                 score=int(row_data.get("score") or 0),
             )
@@ -257,7 +250,8 @@ def main() -> None:
         print("Dry run complete.")
         for path in excel_files:
             paper = parse_excel_file(path)
-            print(f"- {path.name} | {paper.paper_type} v{paper.version_no} | {len(paper.questions)} questions")
+            max_options = max((len(question.options) for question in paper.questions), default=0)
+            print(f"- {path.name} | {paper.paper_type} v{paper.version_no} | {len(paper.questions)} questions | max_options={max_options}")
         return
 
     Base.metadata.create_all(bind=engine)
