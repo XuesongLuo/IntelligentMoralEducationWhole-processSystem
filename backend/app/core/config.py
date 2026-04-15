@@ -41,7 +41,8 @@ class Settings(BaseSettings):
     FORGOT_PASSWORD_LIMIT_WINDOW_SECONDS: int = 600
     FORGOT_PASSWORD_LIMIT_MAX_ATTEMPTS: int = 5
 
-    AI_ANALYSIS_WEBHOOK_URL: str = ""
+    AI_ANALYSIS_WEBHOOK_URL: str = "http://localhost:11015/api/v1/evaluation/analyze"
+    AI_ANALYSIS_MODEL: str = ""
     AI_CALLBACK_TOKEN: str = "imews-ai-callback-token"
     AI_REQUEST_TIMEOUT_SECONDS: int = 15
 

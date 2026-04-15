@@ -65,6 +65,7 @@ from app.schemas.resource import (
     ResourceVisitResponseModel,
 )
 from app.services.exam_runtime import (
+    apply_ai_callback,
     acquire_submit_lock,
     build_ai_payload,
     clear_exam_session,
@@ -1465,7 +1466,10 @@ def submit_teacher_exam(
             questions=questions,
             answers=answer_rows,
         )
-        success, error_message = dispatch_ai_analysis(payload_json)
+        success, error_message, ai_result_payload = dispatch_ai_analysis(
+            payload_json,
+            attempt_id=attempt.id,
+        )
         if not success:
             report.status = "failed"
             report.summary = "AI 分析任务发送失败"
@@ -1474,6 +1478,13 @@ def submit_teacher_exam(
                 "message": error_message,
             }
             attempt.status = "submitted"
+            db.commit()
+        elif ai_result_payload:
+            apply_ai_callback(
+                db,
+                attempt_id=attempt.id,
+                payload=ai_result_payload,
+            )
             db.commit()
 
         return SubmitExamResponseModel(

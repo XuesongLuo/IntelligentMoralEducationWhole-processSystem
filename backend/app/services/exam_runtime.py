@@ -28,6 +28,42 @@ DIMENSION_FIELDS = [
 ]
 
 
+def _stringify_answer(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "；".join(_stringify_answer(item) for item in value if item is not None)
+    if isinstance(value, dict):
+        selected = value.get("selected")
+        extras = value.get("extras")
+        parts = []
+        if isinstance(selected, list):
+            for item in selected:
+                item_text = _stringify_answer(item)
+                extra_text = ""
+                if isinstance(extras, dict):
+                    extra_val = extras.get(item)
+                    extra_text = _stringify_answer(extra_val).strip()
+                parts.append(f"{item_text}({extra_text})" if extra_text else item_text)
+            if parts:
+                return "；".join(parts)
+        return json.dumps(value, ensure_ascii=False)
+    return str(value)
+
+
+def _stringify_correct_answer(value) -> str | None:
+    if value is None:
+        return None
+    text = _stringify_answer(value).strip()
+    return text or None
+
+
 def session_key(user_id: int, paper_id: int) -> str:
     return f"exam:session:{user_id}:{paper_id}"
 
@@ -176,6 +212,13 @@ def build_ai_payload(
     answers: list[AssessmentAnswer],
 ) -> dict:
     question_map = {question.id: question for question in questions}
+    student_identifier = (
+        user.student_profile.student_no
+        if user.student_profile
+        else user.teacher_profile.teacher_no
+        if user.teacher_profile
+        else str(user.id)
+    )
     answer_items = []
     for answer in answers:
         question = question_map.get(answer.question_id)
@@ -183,43 +226,51 @@ def build_ai_payload(
             continue
         answer_items.append(
             {
-                "question_id": question.id,
-                "question_type": question.question_type,
-                "title": question.title,
-                "answer": answer.answer_json,
-                "score": question.score,
+                "question": question.title,
+                "answer": _stringify_answer(answer.answer_json),
+                "correctAnswer": _stringify_correct_answer(question.answer_json),
             }
         )
 
+    payload = {
+        "studentId": student_identifier,
+        "examTime": str(attempt.duration_seconds or 0),
+        "examContent": answer_items,
+    }
+    if settings.AI_ANALYSIS_MODEL:
+        payload["model"] = settings.AI_ANALYSIS_MODEL
+    return payload
+
+
+def _map_evaluation_result_to_callback_payload(attempt_id: int, response_payload: dict) -> dict:
+    data = response_payload.get("data") if isinstance(response_payload, dict) else None
+    if not isinstance(data, dict):
+        raise ValueError("missing response data")
+
+    def dim_score(name: str):
+        dim = data.get(name)
+        if not isinstance(dim, dict):
+            return None
+        score = dim.get("score")
+        return float(score) if score is not None else None
+
     return {
-        "attempt_id": attempt.id,
-        "paper": {
-            "id": paper.id,
-            "title": paper.title,
-            "paper_type": paper.paper_type,
-        },
-        "user": {
-            "id": user.id,
-            "role": user.role,
-            "real_name": user.real_name,
-            "student_no": user.student_profile.student_no if user.student_profile else None,
-            "teacher_no": user.teacher_profile.teacher_no if user.teacher_profile else None,
-        },
-        "submitted_at": attempt.submitted_at.strftime("%Y-%m-%d %H:%M:%S") if attempt.submitted_at else "",
-        "duration_seconds": attempt.duration_seconds,
-        "answers": answer_items,
-        "callback": {
-            "url": f"{settings.BACKEND_PUBLIC_BASE_URL}{settings.API_V1_PREFIX}/exam/ai/callback",
-            "method": "POST",
-            "header_name": "X-AI-Callback-Token",
-            "token": settings.AI_CALLBACK_TOKEN,
-        },
+        "attempt_id": attempt_id,
+        "status": "completed",
+        "score_research_integrity": dim_score("scientificIntegrity"),
+        "score_communication_anxiety": dim_score("communicationAnxiety"),
+        "score_career_identity": dim_score("careerIdentity"),
+        "score_humanistic_care": dim_score("humanisticCare"),
+        "score_comprehensive_balance": dim_score("balancedDevelopment"),
+        "total_score": data.get("overallScore"),
+        "summary": data.get("overallComment") or "",
+        "raw_provider_response": response_payload,
     }
 
 
-def dispatch_ai_analysis(payload: dict) -> tuple[bool, str]:
+def dispatch_ai_analysis(payload: dict, attempt_id: int | None = None) -> tuple[bool, str, dict | None]:
     if not settings.AI_ANALYSIS_WEBHOOK_URL:
-        return False, "AI webhook is not configured"
+        return False, "AI webhook is not configured", None
 
     request = urllib.request.Request(
         settings.AI_ANALYSIS_WEBHOOK_URL,
@@ -230,10 +281,30 @@ def dispatch_ai_analysis(payload: dict) -> tuple[bool, str]:
 
     try:
         with urllib.request.urlopen(request, timeout=settings.AI_REQUEST_TIMEOUT_SECONDS) as response:
-            response.read()
-        return True, ""
+            body = response.read().decode("utf-8") if response else ""
+        if not body:
+            if attempt_id is not None:
+                return False, "AI response is empty", None
+            return True, "", None
+
+        parsed = json.loads(body)
+        if not isinstance(parsed, dict):
+            if attempt_id is not None:
+                return False, "AI response format is invalid", None
+            return True, "", None
+
+        if attempt_id is None:
+            return True, "", None
+        mapped_payload = _map_evaluation_result_to_callback_payload(attempt_id, parsed)
+        return True, "", mapped_payload
+    except ValueError as exc:
+        return False, str(exc), None
+    except json.JSONDecodeError:
+        if attempt_id is not None:
+            return False, "AI response is not valid JSON", None
+        return True, "", None
     except urllib.error.URLError as exc:
-        return False, str(exc)
+        return False, str(exc), None
 
 
 def apply_ai_callback(
