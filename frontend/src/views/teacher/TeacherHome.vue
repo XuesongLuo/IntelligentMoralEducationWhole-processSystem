@@ -91,9 +91,6 @@
           <div class="nav-btn" @click="goStudy">
             <span>德育资源学习</span>
           </div>
-          <div class="nav-btn roster-btn" @click="goRosterManage">
-            <span>预录入<br />名单管理</span>
-          </div>
         </div>
       </el-card>
     </div>
@@ -170,10 +167,6 @@ function goResults() {
 
 function goStudy() {
   router.push('/teacher/resource-study')
-}
-
-function goRosterManage() {
-  router.push('/teacher/roster-manage')
 }
 
 async function loadData() {
@@ -371,10 +364,6 @@ onMounted(async () => {
   cursor: pointer;
   transition: all 0.25s;
   background: #fff;
-}
-
-.roster-btn {
-  border-style: dashed;
 }
 
 .nav-btn:hover {

@@ -12,8 +12,8 @@
       <span class="system-name">{{ systemName }}</span>
     </button>
 
-    <el-dropdown trigger="click" :disabled="logoutDisabled" @command="handleCommand">
-      <button class="account-trigger" type="button" :disabled="logoutDisabled">
+    <el-dropdown trigger="click" @command="handleCommand">
+      <button class="account-trigger" type="button">
         <div class="right-box">
           <el-icon><User /></el-icon>
           <span class="username">{{ username || '用户' }}</span>
@@ -22,6 +22,13 @@
       </button>
       <template #dropdown>
         <el-dropdown-menu>
+          <el-dropdown-item
+            v-if="showRosterManage"
+            command="roster-manage"
+            :disabled="rosterManageDisabled"
+          >
+            预录入名单管理
+          </el-dropdown-item>
           <el-dropdown-item command="logout" :disabled="logoutDisabled">
             {{ logoutDisabled ? '考试中不可退出账号' : '退出账号' }}
           </el-dropdown-item>
@@ -54,12 +61,24 @@ const props = defineProps({
   homeDisabled: {
     type: Boolean,
     default: false
+  },
+  showRosterManage: {
+    type: Boolean,
+    default: false
+  },
+  rosterManageDisabled: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['logout', 'go-home'])
+const emit = defineEmits(['logout', 'go-home', 'go-roster-manage'])
 
 function handleCommand(command) {
+  if (command === 'roster-manage' && !props.rosterManageDisabled) {
+    emit('go-roster-manage')
+    return
+  }
   if (command === 'logout' && !props.logoutDisabled) {
     emit('logout')
   }
@@ -124,15 +143,6 @@ function handleGoHome() {
 
 .account-trigger:hover {
   background: #f3f6fb;
-}
-
-.account-trigger:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.account-trigger:disabled:hover {
-  background: transparent;
 }
 
 .logo-img {

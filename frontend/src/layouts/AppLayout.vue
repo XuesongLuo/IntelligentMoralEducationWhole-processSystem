@@ -6,8 +6,11 @@
       :system-name="systemName"
       :logout-disabled="logoutDisabled"
       :home-disabled="homeDisabled"
+      :show-roster-manage="userInfo.role === 'teacher'"
+      :roster-manage-disabled="homeDisabled"
       @logout="handleLogout"
       @go-home="handleGoHome"
+      @go-roster-manage="handleGoRosterManage"
     />
 
     <main class="app-main">
@@ -102,6 +105,14 @@ function handleGoHome() {
   }
 
   router.push(getHomePath())
+}
+
+function handleGoRosterManage() {
+  if (homeDisabled.value) {
+    notifyExamWarning(EXAM_BLOCKED_MESSAGE)
+    return
+  }
+  router.push('/teacher/roster-manage')
 }
 
 watch(
