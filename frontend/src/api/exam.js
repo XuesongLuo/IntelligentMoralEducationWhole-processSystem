@@ -144,3 +144,11 @@ export function exportExamResultsByFilter(data) {
     responseType: 'blob'
   })
 }
+
+export function retryExamResultAnalysis(resultId, userId) {
+  return request({
+    url: `${getRolePrefix()}/exam/results/${resultId}/retry-analysis`,
+    method: 'post',
+    params: userId ? { userId } : {}
+  })
+}

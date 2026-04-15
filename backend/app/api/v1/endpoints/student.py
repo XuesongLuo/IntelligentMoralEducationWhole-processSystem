@@ -704,24 +704,6 @@ def submit_student_exam(
         clear_exam_session(current_user.id, paper.id)
 
         trigger_ai_analysis_async(attempt.id)
-        success = True
-        ai_result_payload = None
-        if not success:
-            report.status = "failed"
-            report.summary = "AI 分析任务发送失败"
-            report.raw_response_json = {
-                "status": "failed",
-                "message": error_message,
-            }
-            attempt.status = "submitted"
-            db.commit()
-        elif ai_result_payload:
-            apply_ai_callback(
-                db,
-                attempt_id=attempt.id,
-                payload=ai_result_payload,
-            )
-            db.commit()
 
         return SubmitExamResponseModel(
             data=SubmitExamResponseData(
@@ -765,6 +747,8 @@ def get_student_exam_results(
             submitTime=format_datetime(attempt.submitted_at),
             durationMinutes=max(int((attempt.duration_seconds or 0) / 60), 0),
             analysisReady=bool(report and report.status == "completed"),
+            analysisStatus=(report.status if report else ""),
+            analysisMessage=(report.summary if report and report.status == "failed" else ""),
         )
         for attempt, paper, report in rows
     ]
@@ -830,3 +814,45 @@ def get_student_exam_result_detail(
             aiAnalysis=build_result_analysis(report),
         )
     )
+
+
+@router.post("/exam/results/{result_id}/retry-analysis", response_model=ResponseModel)
+def retry_student_exam_result_analysis(
+    result_id: int,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="只有学生可以重试分析")
+
+    row = (
+        db.query(AssessmentAttempt, AssessmentAIReport)
+        .outerjoin(AssessmentAIReport, AssessmentAIReport.attempt_id == AssessmentAttempt.id)
+        .filter(
+            AssessmentAttempt.id == result_id,
+            AssessmentAttempt.user_id == current_user.id,
+            AssessmentAttempt.submitted_at.isnot(None),
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="考试结果不存在")
+
+    attempt, report = row
+    if report and report.status == "processing":
+        raise HTTPException(status_code=409, detail="模型分析进行中，请稍后")
+    if report and report.status == "completed":
+        raise HTTPException(status_code=409, detail="模型分析已完成，无需重试")
+
+    if not report:
+        report = AssessmentAIReport(attempt_id=attempt.id)
+        db.add(report)
+
+    report.status = "processing"
+    report.summary = "AI 分析中"
+    report.raw_response_json = {"status": "processing", "retry": True}
+    attempt.status = "ai_processing"
+    db.commit()
+
+    trigger_ai_analysis_async(attempt.id)
+    return ResponseModel(data={"success": True, "resultId": result_id})

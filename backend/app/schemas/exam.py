@@ -91,6 +91,8 @@ class ExamResultListItem(BaseModel):
     submitTime: str | None = None
     durationMinutes: int = 0
     analysisReady: bool = False
+    analysisStatus: str = ""
+    analysisMessage: str = ""
 
 
 class ExamResultListData(BaseModel):

@@ -36,7 +36,7 @@
             </el-table-column>
             <el-table-column prop="submitTime" label="提交时间" width="220" />
             <el-table-column prop="durationMinutes" label="答题时长(min)" width="130" />
-            <el-table-column label="操作" width="360">
+            <el-table-column label="操作" width="420">
               <template #default="{ row }">
                 <el-button
                   v-if="row.analysisReady"
@@ -46,7 +46,18 @@
                 >
                   点击查看
                 </el-button>
-                <span v-else class="status-tip">模型分析中...</span>
+                <template v-else>
+                  <span v-if="row.analysisStatus === 'failed'" class="status-failed">分析失败</span>
+                  <span v-else class="status-tip">模型分析中...</span>
+                  <el-button
+                    v-if="row.analysisStatus === 'failed'"
+                    type="danger"
+                    link
+                    @click="retryAnalysis(row)"
+                  >
+                    重新分析
+                  </el-button>
+                </template>
                 <el-button type="success" link @click="handleExportOne(row)">导出本次</el-button>
               </template>
             </el-table-column>
@@ -172,7 +183,8 @@ import {
   exportExamResultsByFilter,
   exportExamResultsByType,
   getExamResultList,
-  getExportFilterOptions
+  getExportFilterOptions,
+  retryExamResultAnalysis
 } from '@/api/exam'
 import { saveExcelBlob } from '@/utils/fileSave'
 import { useTeacherViewStore } from '@/stores/teacherView'
@@ -252,6 +264,18 @@ function handlePageChange(page) {
 function openDetail(row) {
   currentResultId.value = row.id
   dialogVisible.value = true
+}
+
+async function retryAnalysis(row) {
+  if (!selectedUser.value?.id) return
+  try {
+    await retryExamResultAnalysis(row.id, selectedUser.value.id)
+    ElMessage.success('已触发重新分析，请稍后刷新查看')
+    loadList()
+  } catch (error) {
+    const message = error?.response?.data?.detail || '重新分析失败，请稍后重试'
+    ElMessage.error(message)
+  }
 }
 
 async function handleExportOne(row) {
@@ -481,6 +505,11 @@ h1 {
 
 .status-tip {
   color: #999;
+  margin-right: 8px;
+}
+
+.status-failed {
+  color: #f56c6c;
   margin-right: 8px;
 }
 
