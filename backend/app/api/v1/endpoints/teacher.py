@@ -103,6 +103,11 @@ class TeacherRosterUpsertRequest(BaseModel):
     is_enabled: bool = True
 
 
+class TeacherFilterExportRequest(BaseModel):
+    accountScope: str
+    paperIds: list[int]
+
+
 DIMENSION_CONFIG = [
     ("research_integrity", "科研诚信脆弱型", "score_research_integrity"),
     ("communication_anxiety", "医患沟通焦虑型", "score_communication_anxiety"),
@@ -207,6 +212,44 @@ def build_export_workbook(rows: list[list[str]], question_count: int) -> BytesIO
     return output
 
 
+def build_export_workbook_by_mode(
+    rows: list[list[str]],
+    question_count: int,
+    export_mode: str,
+) -> BytesIO:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "结果导出"
+
+    if export_mode == "survey":
+        type_header = "类型(问卷、思政试卷或科研诚信试卷)"
+        name_header = "问卷名称"
+    else:
+        type_header = "类型(问卷、试卷)"
+        name_header = "考试名称"
+
+    headers = [
+        "学号",
+        "姓名",
+        type_header,
+        name_header,
+        "开始时间",
+        "持续时长",
+    ]
+    headers.extend([f"题目{i}" for i in range(1, question_count + 1)])
+    for _, dimension_label in EXPORT_DIMENSION_COLUMNS:
+        headers.extend([f"{dimension_label}评分", f"{dimension_label}评语"])
+    sheet.append(headers)
+
+    for row in rows:
+        sheet.append(row)
+
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return output
+
+
 def fetch_attempt_export_data(db: Session, attempt_id: int, user_id: int):
     row = (
         db.query(AssessmentAttempt, AssessmentPaper, AssessmentAIReport, AuthUser)
@@ -255,11 +298,17 @@ def build_export_row(
     report: AssessmentAIReport | None,
     user: AuthUser,
     answers: list[str],
+    export_mode: str | None = None,
 ) -> list[str]:
+    if export_mode == "exam":
+        type_label = "问卷" if paper.paper_type == "survey" else "试卷"
+    else:
+        type_label = map_paper_type_label(paper.paper_type)
+
     row = [
         get_user_no(user),
         user.real_name,
-        map_paper_type_label(paper.paper_type),
+        type_label,
         paper.title,
         format_datetime(attempt.started_at),
         f"{max(int((attempt.duration_seconds or 0) / 60), 0)} min",
@@ -277,6 +326,36 @@ def format_datetime(value: datetime | None) -> str:
     if not value:
         return ""
     return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def build_export_rows_and_question_count(
+    db: Session,
+    rows: list[tuple[AssessmentAttempt, AssessmentPaper, AssessmentAIReport | None, AuthUser]],
+    export_mode: str | None = None,
+) -> tuple[list[list[str]], int]:
+    export_rows: list[list[str]] = []
+    max_question_count = 0
+    for attempt, paper, report, user in rows:
+        answers = fetch_attempt_answers_by_order(db, attempt.id, paper.id)
+        max_question_count = max(max_question_count, len(answers))
+        export_rows.append(
+            build_export_row(
+                attempt=attempt,
+                paper=paper,
+                report=report,
+                user=user,
+                answers=answers,
+                export_mode=export_mode,
+            )
+        )
+
+    for row in export_rows:
+        answer_count = len(row) - 6 - (2 * len(EXPORT_DIMENSION_COLUMNS))
+        if answer_count < max_question_count:
+            insert_index = 6 + answer_count
+            row[insert_index:insert_index] = [""] * (max_question_count - answer_count)
+
+    return export_rows, max_question_count
 
 
 def build_dimension_reason(score: float, dimension_name: str) -> str:
@@ -1481,21 +1560,129 @@ def export_teacher_exam_results_by_type(
     if not rows:
         raise HTTPException(status_code=404, detail="未找到可导出的结果")
 
-    export_rows: list[list[str]] = []
-    max_question_count = 0
-    for attempt, paper, report, user in rows:
-        answers = fetch_attempt_answers_by_order(db, attempt.id, paper.id)
-        max_question_count = max(max_question_count, len(answers))
-        export_rows.append(build_export_row(attempt, paper, report, user, answers))
-
-    for row in export_rows:
-        answer_count = len(row) - 6 - (2 * len(EXPORT_DIMENSION_COLUMNS))
-        if answer_count < max_question_count:
-            insert_index = 6 + answer_count
-            row[insert_index:insert_index] = [""] * (max_question_count - answer_count)
+    export_rows, max_question_count = build_export_rows_and_question_count(db, rows)
 
     workbook_stream = build_export_workbook(export_rows, max_question_count)
     file_name = f"{paperType}_all_results_user_{userId}.xlsx"
+    return StreamingResponse(
+        workbook_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
+    )
+
+
+@router.get("/exam/results/export/options", response_model=ResponseModel)
+def get_teacher_export_filter_options(
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以获取导出筛选项")
+
+    papers = (
+        db.query(AssessmentPaper)
+        .filter(AssessmentPaper.is_active == True)
+        .order_by(
+            AssessmentPaper.paper_type.asc(),
+            AssessmentPaper.version_no.asc(),
+            AssessmentPaper.id.asc(),
+        )
+        .all()
+    )
+
+    survey_options = []
+    exam_options = []
+    for paper in papers:
+        item = {
+            "id": paper.id,
+            "paperType": paper.paper_type,
+            "versionNo": paper.version_no,
+            "title": paper.title,
+            "label": f"{paper.title}（第{paper.version_no}套）",
+        }
+        if paper.paper_type == "survey":
+            survey_options.append(item)
+        elif paper.paper_type in {"integrity", "ideology"}:
+            exam_options.append(item)
+
+    return ResponseModel(
+        data={
+            "survey": survey_options,
+            "exam": exam_options,
+        }
+    )
+
+
+@router.post("/exam/results/export/filter")
+def export_teacher_exam_results_by_filter(
+    payload: TeacherFilterExportRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="只有老师可以导出结果")
+
+    account_scope = (payload.accountScope or "").strip().lower()
+    if account_scope not in {"teacher", "student", "all"}:
+        raise HTTPException(status_code=400, detail="账号类型参数错误")
+    if not payload.paperIds:
+        raise HTTPException(status_code=400, detail="请至少选择一套问卷或试卷")
+
+    try:
+        paper_ids = sorted(set(int(item) for item in payload.paperIds))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="试卷参数错误")
+    papers = (
+        db.query(AssessmentPaper)
+        .filter(
+            AssessmentPaper.id.in_(paper_ids),
+            AssessmentPaper.is_active == True,
+        )
+        .all()
+    )
+    if len(papers) != len(paper_ids):
+        raise HTTPException(status_code=400, detail="部分试卷不存在或未启用")
+
+    selected_types = {paper.paper_type for paper in papers}
+    contains_survey = "survey" in selected_types
+    contains_exam = any(item in {"integrity", "ideology"} for item in selected_types)
+    if contains_survey and contains_exam:
+        raise HTTPException(status_code=400, detail="问卷与试卷不能同时导出，请分开导出")
+
+    export_mode = "survey" if contains_survey else "exam"
+
+    query = (
+        db.query(AssessmentAttempt, AssessmentPaper, AssessmentAIReport, AuthUser)
+        .join(AssessmentPaper, AssessmentPaper.id == AssessmentAttempt.paper_id)
+        .outerjoin(AssessmentAIReport, AssessmentAIReport.attempt_id == AssessmentAttempt.id)
+        .join(AuthUser, AuthUser.id == AssessmentAttempt.user_id)
+        .filter(
+            AssessmentAttempt.paper_id.in_(paper_ids),
+            AssessmentAttempt.submitted_at.isnot(None),
+        )
+    )
+
+    if account_scope == "teacher":
+        query = query.filter(AuthUser.role == "teacher")
+    elif account_scope == "student":
+        query = query.filter(AuthUser.role == "student")
+
+    rows = query.order_by(AssessmentAttempt.submitted_at.asc(), AssessmentAttempt.id.asc()).all()
+    if not rows:
+        raise HTTPException(status_code=404, detail="未找到可导出的结果")
+
+    export_rows, max_question_count = build_export_rows_and_question_count(
+        db=db,
+        rows=rows,
+        export_mode=export_mode,
+    )
+    workbook_stream = build_export_workbook_by_mode(
+        rows=export_rows,
+        question_count=max_question_count,
+        export_mode=export_mode,
+    )
+
+    file_name = f"{export_mode}_results_{account_scope}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx"
     return StreamingResponse(
         workbook_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

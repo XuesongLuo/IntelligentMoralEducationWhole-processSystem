@@ -128,3 +128,19 @@ export function exportExamResultsByType(userId, paperType) {
     responseType: 'blob'
   })
 }
+
+export function getExportFilterOptions() {
+  return request({
+    url: `${getRolePrefix()}/exam/results/export/options`,
+    method: 'get'
+  })
+}
+
+export function exportExamResultsByFilter(data) {
+  return request({
+    url: `${getRolePrefix()}/exam/results/export/filter`,
+    method: 'post',
+    data,
+    responseType: 'blob'
+  })
+}

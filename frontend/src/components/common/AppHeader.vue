@@ -12,34 +12,52 @@
       <span class="system-name">{{ systemName }}</span>
     </button>
 
-    <el-dropdown trigger="click" @command="handleCommand">
-      <button class="account-trigger" type="button">
-        <div class="right-box">
-          <el-icon><User /></el-icon>
-          <span class="username">{{ username || '用户' }}</span>
-          <el-icon class="caret"><ArrowDown /></el-icon>
-        </div>
-      </button>
-      <template #dropdown>
-        <el-dropdown-menu>
-          <el-dropdown-item
-            v-if="showRosterManage"
-            command="roster-manage"
-            :disabled="rosterManageDisabled"
-          >
-            预录入名单管理
-          </el-dropdown-item>
-          <el-dropdown-item command="logout" :disabled="logoutDisabled">
-            {{ logoutDisabled ? '考试中不可退出账号' : '退出账号' }}
-          </el-dropdown-item>
-        </el-dropdown-menu>
-      </template>
-    </el-dropdown>
+    <div class="right-actions">
+      <el-tooltip
+        v-if="showGlobalExport"
+        content="筛选导出试卷/问卷"
+        placement="bottom"
+      >
+        <button
+          class="export-btn"
+          type="button"
+          :disabled="globalExportDisabled"
+          @click="handleGlobalExport"
+        >
+          <el-icon><Download /></el-icon>
+          <span>筛选导出</span>
+        </button>
+      </el-tooltip>
+
+      <el-dropdown trigger="click" @command="handleCommand">
+        <button class="account-trigger" type="button">
+          <div class="right-box">
+            <el-icon><User /></el-icon>
+            <span class="username">{{ username || '用户' }}</span>
+            <el-icon class="caret"><ArrowDown /></el-icon>
+          </div>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item
+              v-if="showRosterManage"
+              command="roster-manage"
+              :disabled="rosterManageDisabled"
+            >
+              预录入名单管理
+            </el-dropdown-item>
+            <el-dropdown-item command="logout" :disabled="logoutDisabled">
+              {{ logoutDisabled ? '考试中不可退出账号' : '退出账号' }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
   </header>
 </template>
 
 <script setup>
-import { ArrowDown, User } from '@element-plus/icons-vue'
+import { ArrowDown, Download, User } from '@element-plus/icons-vue'
 
 const props = defineProps({
   username: {
@@ -69,10 +87,18 @@ const props = defineProps({
   rosterManageDisabled: {
     type: Boolean,
     default: false
+  },
+  showGlobalExport: {
+    type: Boolean,
+    default: false
+  },
+  globalExportDisabled: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['logout', 'go-home', 'go-roster-manage'])
+const emit = defineEmits(['logout', 'go-home', 'go-roster-manage', 'go-global-export'])
 
 function handleCommand(command) {
   if (command === 'roster-manage' && !props.rosterManageDisabled) {
@@ -87,6 +113,12 @@ function handleCommand(command) {
 function handleGoHome() {
   if (!props.homeDisabled) {
     emit('go-home')
+  }
+}
+
+function handleGlobalExport() {
+  if (!props.globalExportDisabled) {
+    emit('go-global-export')
   }
 }
 </script>
@@ -130,6 +162,35 @@ function handleGoHome() {
 
 .left-box.disabled:hover {
   background: transparent;
+}
+
+.right-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.export-btn {
+  border: 1px solid #dcdfe6;
+  background: #fff;
+  color: #303133;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.export-btn:hover {
+  border-color: #409eff;
+  color: #409eff;
+}
+
+.export-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .account-trigger {

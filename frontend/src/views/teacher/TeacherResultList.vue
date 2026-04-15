@@ -88,20 +88,97 @@
         <el-button type="primary" @click="confirmBatchExport">确认导出</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="globalExportDialogVisible"
+      title="按筛选导出（全体）"
+      width="620px"
+      :close-on-click-modal="false"
+    >
+      <div class="global-export-form">
+        <div class="field-row">
+          <div class="field-label">账号类型</div>
+          <el-radio-group v-model="globalFilter.accountScope">
+            <el-radio value="teacher">仅老师</el-radio>
+            <el-radio value="student">仅学生</el-radio>
+            <el-radio value="all">全部人员</el-radio>
+          </el-radio-group>
+        </div>
+
+        <div class="field-row">
+          <div class="field-label">试卷/问卷类型（多选）</div>
+          <el-select
+            v-model="globalFilter.paperIds"
+            multiple
+            filterable
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="请选择问卷或试卷（问卷与试卷不能混选）"
+            style="width: 100%"
+            @change="handleGlobalPaperChange"
+          >
+            <el-option-group
+              v-if="exportOptions.survey.length"
+              label="问卷"
+            >
+              <el-option
+                v-for="item in exportOptions.survey"
+                :key="item.id"
+                :label="item.label"
+                :value="item.id"
+              />
+            </el-option-group>
+            <el-option-group
+              v-if="exportOptions.exam.length"
+              label="试卷（科研诚信/思政）"
+            >
+              <el-option
+                v-for="item in exportOptions.exam"
+                :key="item.id"
+                :label="item.label"
+                :value="item.id"
+              />
+            </el-option-group>
+          </el-select>
+
+          <div class="quick-actions">
+            <el-button size="small" @click="selectAllSurvey">全部问卷</el-button>
+            <el-button size="small" @click="selectAllExam">全部试卷</el-button>
+            <el-button size="small" @click="clearAllPapers">清空</el-button>
+          </div>
+
+          <div class="tip-text">
+            说明：问卷与试卷不能同时导出，系统会按你选择的类别生成不同模板。
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="globalExportDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmGlobalExport">确认导出</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { getTeacherStudentList } from '@/api/user'
-import { exportExamResult, exportExamResultsByType, getExamResultList } from '@/api/exam'
+import {
+  exportExamResult,
+  exportExamResultsByFilter,
+  exportExamResultsByType,
+  getExamResultList,
+  getExportFilterOptions
+} from '@/api/exam'
 import { useTeacherViewStore } from '@/stores/teacherView'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
 import ResultDetailDialog from '@/components/common/ResultDetailDialog.vue'
 
+const route = useRoute()
 const router = useRouter()
 const teacherViewStore = useTeacherViewStore()
 const { sidebarCollapsed, selectedUser, userList } = storeToRefs(teacherViewStore)
@@ -113,9 +190,27 @@ const currentResultId = ref('')
 const batchExportDialogVisible = ref(false)
 const batchExportType = ref('survey')
 
+const globalExportDialogVisible = ref(false)
+const exportOptions = ref({
+  survey: [],
+  exam: []
+})
+const globalFilter = ref({
+  accountScope: 'all',
+  paperIds: []
+})
+const previousPaperIds = ref([])
+
 const query = ref({
   pageNum: 1,
   pageSize: 10
+})
+
+const paperTypeById = computed(() => {
+  const map = new Map()
+  exportOptions.value.survey.forEach(item => map.set(item.id, item.paperType))
+  exportOptions.value.exam.forEach(item => map.set(item.id, item.paperType))
+  return map
 })
 
 function goBack() {
@@ -202,11 +297,115 @@ async function confirmBatchExport() {
   }
 }
 
+async function loadExportOptions() {
+  const res = await getExportFilterOptions()
+  const data = res.data || {}
+  exportOptions.value = {
+    survey: Array.isArray(data.survey) ? data.survey : [],
+    exam: Array.isArray(data.exam) ? data.exam : []
+  }
+}
+
+async function openGlobalExportDialog() {
+  try {
+    await loadExportOptions()
+    globalFilter.value.accountScope = 'all'
+    globalFilter.value.paperIds = []
+    previousPaperIds.value = []
+    globalExportDialogVisible.value = true
+  } catch (error) {
+    const message = error?.response?.data?.detail || '获取导出筛选项失败'
+    ElMessage.error(message)
+  }
+}
+
+function detectSelectedCategory(paperIds) {
+  const selectedTypes = new Set(
+    paperIds.map(id => paperTypeById.value.get(id)).filter(Boolean)
+  )
+  const hasSurvey = selectedTypes.has('survey')
+  const hasExam = selectedTypes.has('integrity') || selectedTypes.has('ideology')
+  if (hasSurvey && hasExam) return 'mixed'
+  if (hasSurvey) return 'survey'
+  if (hasExam) return 'exam'
+  return 'none'
+}
+
+function handleGlobalPaperChange(values) {
+  const category = detectSelectedCategory(values)
+  if (category === 'mixed') {
+    ElMessage.warning('问卷和试卷不能同时选择，请分开导出')
+    globalFilter.value.paperIds = [...previousPaperIds.value]
+    return
+  }
+  previousPaperIds.value = [...values]
+}
+
+function selectAllSurvey() {
+  globalFilter.value.paperIds = exportOptions.value.survey.map(item => item.id)
+  previousPaperIds.value = [...globalFilter.value.paperIds]
+}
+
+function selectAllExam() {
+  globalFilter.value.paperIds = exportOptions.value.exam.map(item => item.id)
+  previousPaperIds.value = [...globalFilter.value.paperIds]
+}
+
+function clearAllPapers() {
+  globalFilter.value.paperIds = []
+  previousPaperIds.value = []
+}
+
+async function confirmGlobalExport() {
+  if (!globalFilter.value.paperIds.length) {
+    ElMessage.warning('请先选择至少一套问卷或试卷')
+    return
+  }
+
+  const selectedCategory = detectSelectedCategory(globalFilter.value.paperIds)
+  if (selectedCategory === 'mixed') {
+    ElMessage.warning('问卷和试卷不能同时选择，请分开导出')
+    return
+  }
+
+  try {
+    const blob = await exportExamResultsByFilter({
+      accountScope: globalFilter.value.accountScope,
+      paperIds: globalFilter.value.paperIds
+    })
+    const categoryText = selectedCategory === 'survey' ? '问卷' : '试卷'
+    const accountText =
+      globalFilter.value.accountScope === 'teacher'
+        ? '仅老师'
+        : globalFilter.value.accountScope === 'student'
+        ? '仅学生'
+        : '全部人员'
+    triggerFileDownload(blob, `${categoryText}_${accountText}_筛选导出.xlsx`)
+    globalExportDialogVisible.value = false
+    ElMessage.success('导出成功')
+  } catch (error) {
+    const message = error?.response?.data?.detail || '导出失败，请稍后重试'
+    ElMessage.error(message)
+  }
+}
+
 watch(
   () => selectedUser.value,
   () => {
     query.value.pageNum = 1
     loadList()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => route.query.globalExport,
+  async val => {
+    if (!val) return
+    await openGlobalExportDialog()
+    const nextQuery = { ...route.query }
+    delete nextQuery.globalExport
+    router.replace({ path: route.path, query: nextQuery })
   },
   { immediate: true }
 )
@@ -296,6 +495,33 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.global-export-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-label {
+  color: #303133;
+  font-weight: 600;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.tip-text {
+  color: #909399;
+  font-size: 13px;
 }
 
 .pagination-row {

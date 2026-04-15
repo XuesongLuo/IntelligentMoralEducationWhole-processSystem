@@ -347,8 +347,8 @@ onMounted(async () => {
   min-height: 240px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  justify-content: center;
+  gap: 56px;
 }
 
 .nav-btn {

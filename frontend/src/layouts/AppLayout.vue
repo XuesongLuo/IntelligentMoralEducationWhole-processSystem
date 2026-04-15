@@ -8,9 +8,12 @@
       :home-disabled="homeDisabled"
       :show-roster-manage="userInfo.role === 'teacher'"
       :roster-manage-disabled="homeDisabled"
+      :show-global-export="userInfo.role === 'teacher'"
+      :global-export-disabled="homeDisabled"
       @logout="handleLogout"
       @go-home="handleGoHome"
       @go-roster-manage="handleGoRosterManage"
+      @go-global-export="handleGoGlobalExport"
     />
 
     <main class="app-main">
@@ -113,6 +116,19 @@ function handleGoRosterManage() {
     return
   }
   router.push('/teacher/roster-manage')
+}
+
+function handleGoGlobalExport() {
+  if (homeDisabled.value) {
+    notifyExamWarning(EXAM_BLOCKED_MESSAGE)
+    return
+  }
+  router.push({
+    path: '/teacher/results',
+    query: {
+      globalExport: String(Date.now())
+    }
+  })
 }
 
 watch(
