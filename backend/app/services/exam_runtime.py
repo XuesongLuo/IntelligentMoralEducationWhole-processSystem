@@ -1,4 +1,6 @@
 import json
+import socket
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -6,6 +8,7 @@ import urllib.request
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.database import SessionLocal
 from app.core.redis import get_redis
 from app.models.assessment_ai_report import AssessmentAIReport
 from app.models.assessment_answer import AssessmentAnswer
@@ -303,8 +306,12 @@ def dispatch_ai_analysis(payload: dict, attempt_id: int | None = None) -> tuple[
         if attempt_id is not None:
             return False, "AI response is not valid JSON", None
         return True, "", None
+    except (TimeoutError, socket.timeout):
+        return False, "AI request timed out", None
     except urllib.error.URLError as exc:
         return False, str(exc), None
+    except Exception as exc:
+        return False, f"AI request failed: {exc}", None
 
 
 def apply_ai_callback(
@@ -340,3 +347,87 @@ def apply_ai_callback(
         attempt.total_score = round(report.total_score)
 
     return report
+
+
+def _mark_ai_failed(db: Session, attempt_id: int, error_message: str) -> None:
+    attempt = db.query(AssessmentAttempt).filter(AssessmentAttempt.id == attempt_id).first()
+    if not attempt:
+        return
+    report = db.query(AssessmentAIReport).filter(AssessmentAIReport.attempt_id == attempt_id).first()
+    if not report:
+        report = AssessmentAIReport(
+            attempt_id=attempt_id,
+            status="failed",
+            summary="AI 分析任务发送失败",
+            raw_response_json={"status": "failed", "message": error_message},
+        )
+        db.add(report)
+    else:
+        report.status = "failed"
+        report.summary = "AI 分析任务发送失败"
+        report.raw_response_json = {"status": "failed", "message": error_message}
+    attempt.status = "submitted"
+
+
+def _run_ai_analysis_job(attempt_id: int) -> None:
+    db: Session = SessionLocal()
+    try:
+        attempt = db.query(AssessmentAttempt).filter(AssessmentAttempt.id == attempt_id).first()
+        if not attempt:
+            return
+        paper = db.query(AssessmentPaper).filter(AssessmentPaper.id == attempt.paper_id).first()
+        user = db.query(AuthUser).filter(AuthUser.id == attempt.user_id).first()
+        if not paper or not user:
+            _mark_ai_failed(db, attempt_id, "attempt context missing")
+            db.commit()
+            return
+
+        questions = (
+            db.query(AssessmentQuestion)
+            .join(AssessmentAnswer, AssessmentAnswer.question_id == AssessmentQuestion.id)
+            .filter(AssessmentAnswer.attempt_id == attempt_id)
+            .all()
+        )
+        answers = (
+            db.query(AssessmentAnswer)
+            .filter(AssessmentAnswer.attempt_id == attempt_id)
+            .all()
+        )
+
+        payload_json = build_ai_payload(
+            attempt=attempt,
+            paper=paper,
+            user=user,
+            questions=questions,
+            answers=answers,
+        )
+        success, error_message, ai_result_payload = dispatch_ai_analysis(
+            payload_json,
+            attempt_id=attempt_id,
+        )
+
+        if not success:
+            _mark_ai_failed(db, attempt_id, error_message)
+            db.commit()
+            return
+
+        if ai_result_payload:
+            apply_ai_callback(db, attempt_id=attempt_id, payload=ai_result_payload)
+            db.commit()
+            return
+    except Exception as exc:
+        db.rollback()
+        _mark_ai_failed(db, attempt_id, f"AI async job failed: {exc}")
+        db.commit()
+    finally:
+        db.close()
+
+
+def trigger_ai_analysis_async(attempt_id: int) -> None:
+    thread = threading.Thread(
+        target=_run_ai_analysis_job,
+        args=(attempt_id,),
+        daemon=True,
+        name=f"ai-analysis-{attempt_id}",
+    )
+    thread.start()

@@ -65,15 +65,13 @@ from app.schemas.resource import (
     ResourceVisitResponseModel,
 )
 from app.services.exam_runtime import (
-    apply_ai_callback,
     acquire_submit_lock,
-    build_ai_payload,
     clear_exam_session,
-    dispatch_ai_analysis,
     ensure_exam_session,
     finalize_exam_session,
     heartbeat_exam_session,
     release_submit_lock,
+    trigger_ai_analysis_async,
 )
 from app.services.resource_runtime import (
     build_category_progress_list,
@@ -1436,7 +1434,6 @@ def submit_teacher_exam(
         db.add(attempt)
         db.flush()
 
-        answer_rows = []
         for question in questions:
             normalized_answer = normalize_answer_for_storage(question, answer_map.get(question.id))
             answer = AssessmentAnswer(
@@ -1447,7 +1444,6 @@ def submit_teacher_exam(
                 judged_at=None,
             )
             db.add(answer)
-            answer_rows.append(answer)
 
         report = AssessmentAIReport(
             attempt_id=attempt.id,
@@ -1459,17 +1455,9 @@ def submit_teacher_exam(
         db.commit()
         clear_exam_session(current_user.id, paper.id)
 
-        payload_json = build_ai_payload(
-            attempt=attempt,
-            paper=paper,
-            user=current_user,
-            questions=questions,
-            answers=answer_rows,
-        )
-        success, error_message, ai_result_payload = dispatch_ai_analysis(
-            payload_json,
-            attempt_id=attempt.id,
-        )
+        trigger_ai_analysis_async(attempt.id)
+        success = True
+        ai_result_payload = None
         if not success:
             report.status = "failed"
             report.summary = "AI 分析任务发送失败"
