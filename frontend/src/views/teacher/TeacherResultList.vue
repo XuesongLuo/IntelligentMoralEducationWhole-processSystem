@@ -174,6 +174,7 @@ import {
   getExamResultList,
   getExportFilterOptions
 } from '@/api/exam'
+import { saveExcelBlob } from '@/utils/fileSave'
 import { useTeacherViewStore } from '@/stores/teacherView'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
 import ResultDetailDialog from '@/components/common/ResultDetailDialog.vue'
@@ -253,22 +254,12 @@ function openDetail(row) {
   dialogVisible.value = true
 }
 
-function triggerFileDownload(blob, fileName) {
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.URL.revokeObjectURL(url)
-}
-
 async function handleExportOne(row) {
   if (!selectedUser.value?.id) return
   try {
     const blob = await exportExamResult(row.id, selectedUser.value.id)
-    triggerFileDownload(blob, `${formatPaperType(row.paperType)}_${row.title}_单次导出.xlsx`)
+    const result = await saveExcelBlob(blob, `${formatPaperType(row.paperType)}_${row.title}_单次导出.xlsx`)
+    if (result.canceled) return
     ElMessage.success('导出成功')
   } catch (error) {
     const message = error?.response?.data?.detail || '导出失败，请稍后重试'
@@ -285,10 +276,11 @@ async function confirmBatchExport() {
   if (!selectedUser.value?.id) return
   try {
     const blob = await exportExamResultsByType(selectedUser.value.id, batchExportType.value)
-    triggerFileDownload(
+    const result = await saveExcelBlob(
       blob,
       `${selectedUser.value.label}_${formatPaperType(batchExportType.value)}_全部导出.xlsx`
     )
+    if (result.canceled) return
     batchExportDialogVisible.value = false
     ElMessage.success('导出成功')
   } catch (error) {
@@ -380,7 +372,8 @@ async function confirmGlobalExport() {
         : globalFilter.value.accountScope === 'student'
         ? '仅学生'
         : '全部人员'
-    triggerFileDownload(blob, `${categoryText}_${accountText}_筛选导出.xlsx`)
+    const result = await saveExcelBlob(blob, `${categoryText}_${accountText}_筛选导出.xlsx`)
+    if (result.canceled) return
     globalExportDialogVisible.value = false
     ElMessage.success('导出成功')
   } catch (error) {
