@@ -146,6 +146,21 @@ EXPORT_DIMENSION_COLUMNS = [
 ]
 
 
+SURVEY_MASK_PHONE_KEYWORDS = ("联系电话", "手机", "手机号")
+SURVEY_MASK_EMAIL_KEYWORDS = ("电子邮箱", "邮箱", "email", "e-mail")
+SURVEY_MASK_FULL_HIDE_KEYWORDS = ("姓名", "导师姓名", "德育导师姓名")
+SURVEY_KEEP_VISIBLE_KEYWORDS = (
+    "性别",
+    "出生年月",
+    "学号",
+    "政治面貌",
+    "年级",
+    "培养类型",
+    "专业",
+    "所在轮转",
+)
+
+
 def map_paper_type_label(paper_type: str) -> str:
     return {
         "survey": "问卷",
@@ -276,10 +291,76 @@ def get_user_no(user: AuthUser) -> str:
     return ""
 
 
-def fetch_attempt_answers_by_order(db: Session, attempt_id: int, paper_id: int) -> list[str]:
+def mask_full_hidden(value: str) -> str:
+    text = (value or "").strip()
+    if not text:
+        return ""
+    star_count = max(2, min(len(text), 8))
+    return "*" * star_count
+
+
+def mask_phone(value: str) -> str:
+    digits = "".join(ch for ch in (value or "") if ch.isdigit())
+    if not digits:
+        return ""
+    length = len(digits)
+    if length >= 11:
+        return f"{digits[:3]}{'*' * max(length - 7, 4)}{digits[-4:]}"
+    if length <= 2:
+        return digits[0] + "*"
+    if length <= 4:
+        return f"{digits[0]}{'*' * (length - 2)}{digits[-1]}"
+    return f"{digits[:2]}{'*' * max(length - 4, 1)}{digits[-2:]}"
+
+
+def mask_email(value: str) -> str:
+    text = (value or "").strip()
+    if not text:
+        return ""
+    if "@" not in text:
+        return mask_full_hidden(text)
+    local, domain = text.split("@", 1)
+    if not domain:
+        return mask_full_hidden(text)
+    return f"{'*' * max(len(local), 3)}@{domain}"
+
+
+def apply_survey_mask_by_title(question_title: str, answer_text: str) -> str:
+    title = (question_title or "").strip().lower()
+    if not title:
+        return answer_text
+
+    for keyword in SURVEY_MASK_PHONE_KEYWORDS:
+        if keyword.lower() in title:
+            return mask_phone(answer_text)
+    for keyword in SURVEY_MASK_EMAIL_KEYWORDS:
+        if keyword.lower() in title:
+            return mask_email(answer_text)
+    for keyword in SURVEY_MASK_FULL_HIDE_KEYWORDS:
+        if keyword.lower() in title:
+            return mask_full_hidden(answer_text)
+    for keyword in SURVEY_KEEP_VISIBLE_KEYWORDS:
+        if keyword.lower() in title:
+            return answer_text
+    return answer_text
+
+
+def fetch_attempt_answers_by_order(
+    db: Session,
+    attempt_id: int,
+    paper_id: int,
+    survey_masking: bool = False,
+) -> list[str]:
     answer_rows = (
-        db.query(AssessmentPaperQuestion.sort_order, AssessmentAnswer.answer_json)
-        .join(AssessmentQuestion, AssessmentQuestion.id == AssessmentPaperQuestion.question_id)
+        db.query(
+            AssessmentPaperQuestion.sort_order,
+            AssessmentQuestion.title,
+            AssessmentAnswer.answer_json,
+        )
+        .join(
+            AssessmentQuestion,
+            AssessmentQuestion.id == AssessmentPaperQuestion.question_id,
+        )
         .outerjoin(
             AssessmentAnswer,
             (AssessmentAnswer.question_id == AssessmentQuestion.id)
@@ -289,7 +370,13 @@ def fetch_attempt_answers_by_order(db: Session, attempt_id: int, paper_id: int) 
         .order_by(AssessmentPaperQuestion.sort_order.asc())
         .all()
     )
-    return [format_answer_for_export(answer) for _, answer in answer_rows]
+    result = []
+    for _, title, answer in answer_rows:
+        answer_text = format_answer_for_export(answer)
+        if survey_masking:
+            answer_text = apply_survey_mask_by_title(title or "", answer_text)
+        result.append(answer_text)
+    return result
 
 
 def build_export_row(
@@ -300,6 +387,10 @@ def build_export_row(
     answers: list[str],
     export_mode: str | None = None,
 ) -> list[str]:
+    display_name = user.real_name
+    if paper.paper_type == "survey":
+        display_name = mask_full_hidden(display_name)
+
     if export_mode == "exam":
         type_label = "问卷" if paper.paper_type == "survey" else "试卷"
     else:
@@ -307,7 +398,7 @@ def build_export_row(
 
     row = [
         get_user_no(user),
-        user.real_name,
+        display_name,
         type_label,
         paper.title,
         format_datetime(attempt.started_at),
@@ -336,7 +427,12 @@ def build_export_rows_and_question_count(
     export_rows: list[list[str]] = []
     max_question_count = 0
     for attempt, paper, report, user in rows:
-        answers = fetch_attempt_answers_by_order(db, attempt.id, paper.id)
+        answers = fetch_attempt_answers_by_order(
+            db,
+            attempt.id,
+            paper.id,
+            survey_masking=(paper.paper_type == "survey"),
+        )
         max_question_count = max(max_question_count, len(answers))
         export_rows.append(
             build_export_row(
@@ -1516,7 +1612,12 @@ def export_teacher_exam_result(
         raise HTTPException(status_code=403, detail="只有老师可以导出结果")
 
     attempt, paper, report, user = fetch_attempt_export_data(db, result_id, userId)
-    answers = fetch_attempt_answers_by_order(db, attempt.id, paper.id)
+    answers = fetch_attempt_answers_by_order(
+        db,
+        attempt.id,
+        paper.id,
+        survey_masking=(paper.paper_type == "survey"),
+    )
     rows = [build_export_row(attempt, paper, report, user, answers)]
     workbook_stream = build_export_workbook(rows, len(answers))
 
