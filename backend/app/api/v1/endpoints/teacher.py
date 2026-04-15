@@ -6,12 +6,16 @@ from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.auth_user import AuthUser
 from app.models.student_user import StudentUser
 from app.models.teacher_user import TeacherUser
+from app.models.student_roster import StudentRoster
+from app.models.teacher_roster import TeacherRoster
 from app.models.resource_category import ResourceCategory
 from app.models.learning_resource import LearningResource
 from app.models.user_resource_record import UserResourceRecord
@@ -85,6 +89,18 @@ from app.schemas.student import (
 )
 
 router = APIRouter(prefix="/teacher", tags=["teacher"])
+
+
+class StudentRosterUpsertRequest(BaseModel):
+    student_no: str
+    real_name: str
+    is_enabled: bool = True
+
+
+class TeacherRosterUpsertRequest(BaseModel):
+    teacher_no: str
+    real_name: str
+    is_enabled: bool = True
 
 
 DIMENSION_CONFIG = [
@@ -572,6 +588,292 @@ def get_teacher_student_list(
     teacher_items.sort(key=lambda x: (0 if x["id"] == current_user.id else 1, x["teacher_no"]))
 
     return ResponseModel(data=[*teacher_items, *student_items])
+
+
+@router.get("/roster/students", response_model=ResponseModel)
+def get_student_roster_list(
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can access roster")
+
+    rows = (
+        db.query(StudentRoster)
+        .order_by(StudentRoster.student_no.asc(), StudentRoster.id.asc())
+        .all()
+    )
+    return ResponseModel(
+        data=[
+            {
+                "id": row.id,
+                "student_no": row.student_no,
+                "real_name": row.real_name,
+                "is_enabled": row.is_enabled,
+                "imported_at": format_datetime(row.imported_at),
+                "updated_at": format_datetime(row.updated_at),
+            }
+            for row in rows
+        ]
+    )
+
+
+@router.post("/roster/students", response_model=ResponseModel)
+def create_student_roster(
+    payload: StudentRosterUpsertRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage roster")
+
+    student_no = payload.student_no.strip()
+    real_name = payload.real_name.strip()
+    if not student_no or not real_name:
+        raise HTTPException(status_code=400, detail="学号和姓名不能为空")
+
+    existing = db.query(StudentRoster).filter(StudentRoster.student_no == student_no).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="学号已存在")
+
+    row = StudentRoster(
+        student_no=student_no,
+        real_name=real_name,
+        is_enabled=payload.is_enabled,
+    )
+    try:
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="学号已存在")
+
+    return ResponseModel(
+        data={
+            "id": row.id,
+            "student_no": row.student_no,
+            "real_name": row.real_name,
+            "is_enabled": row.is_enabled,
+            "imported_at": format_datetime(row.imported_at),
+            "updated_at": format_datetime(row.updated_at),
+        },
+        message="学生名单添加成功",
+    )
+
+
+@router.put("/roster/students/{roster_id}", response_model=ResponseModel)
+def update_student_roster(
+    roster_id: int,
+    payload: StudentRosterUpsertRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage roster")
+
+    row = db.query(StudentRoster).filter(StudentRoster.id == roster_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="学生名单不存在")
+
+    student_no = payload.student_no.strip()
+    real_name = payload.real_name.strip()
+    if not student_no or not real_name:
+        raise HTTPException(status_code=400, detail="学号和姓名不能为空")
+
+    duplicate = (
+        db.query(StudentRoster)
+        .filter(
+            StudentRoster.student_no == student_no,
+            StudentRoster.id != roster_id,
+        )
+        .first()
+    )
+    if duplicate:
+        raise HTTPException(status_code=400, detail="学号已存在")
+
+    row.student_no = student_no
+    row.real_name = real_name
+    row.is_enabled = payload.is_enabled
+    try:
+        db.commit()
+        db.refresh(row)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="学号已存在")
+
+    return ResponseModel(
+        data={
+            "id": row.id,
+            "student_no": row.student_no,
+            "real_name": row.real_name,
+            "is_enabled": row.is_enabled,
+            "imported_at": format_datetime(row.imported_at),
+            "updated_at": format_datetime(row.updated_at),
+        },
+        message="学生名单更新成功",
+    )
+
+
+@router.delete("/roster/students/{roster_id}", response_model=ResponseModel)
+def delete_student_roster(
+    roster_id: int,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage roster")
+
+    row = db.query(StudentRoster).filter(StudentRoster.id == roster_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="学生名单不存在")
+
+    db.delete(row)
+    db.commit()
+    return ResponseModel(message="学生名单删除成功")
+
+
+@router.get("/roster/teachers", response_model=ResponseModel)
+def get_teacher_roster_list(
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can access roster")
+
+    rows = (
+        db.query(TeacherRoster)
+        .order_by(TeacherRoster.teacher_no.asc(), TeacherRoster.id.asc())
+        .all()
+    )
+    return ResponseModel(
+        data=[
+            {
+                "id": row.id,
+                "teacher_no": row.teacher_no,
+                "real_name": row.real_name,
+                "is_enabled": row.is_enabled,
+                "imported_at": format_datetime(row.imported_at),
+                "updated_at": format_datetime(row.updated_at),
+            }
+            for row in rows
+        ]
+    )
+
+
+@router.post("/roster/teachers", response_model=ResponseModel)
+def create_teacher_roster(
+    payload: TeacherRosterUpsertRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage roster")
+
+    teacher_no = payload.teacher_no.strip()
+    real_name = payload.real_name.strip()
+    if not teacher_no or not real_name:
+        raise HTTPException(status_code=400, detail="工号和姓名不能为空")
+
+    existing = db.query(TeacherRoster).filter(TeacherRoster.teacher_no == teacher_no).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="工号已存在")
+
+    row = TeacherRoster(
+        teacher_no=teacher_no,
+        real_name=real_name,
+        is_enabled=payload.is_enabled,
+    )
+    try:
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="工号已存在")
+
+    return ResponseModel(
+        data={
+            "id": row.id,
+            "teacher_no": row.teacher_no,
+            "real_name": row.real_name,
+            "is_enabled": row.is_enabled,
+            "imported_at": format_datetime(row.imported_at),
+            "updated_at": format_datetime(row.updated_at),
+        },
+        message="教师名单添加成功",
+    )
+
+
+@router.put("/roster/teachers/{roster_id}", response_model=ResponseModel)
+def update_teacher_roster(
+    roster_id: int,
+    payload: TeacherRosterUpsertRequest,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage roster")
+
+    row = db.query(TeacherRoster).filter(TeacherRoster.id == roster_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="教师名单不存在")
+
+    teacher_no = payload.teacher_no.strip()
+    real_name = payload.real_name.strip()
+    if not teacher_no or not real_name:
+        raise HTTPException(status_code=400, detail="工号和姓名不能为空")
+
+    duplicate = (
+        db.query(TeacherRoster)
+        .filter(
+            TeacherRoster.teacher_no == teacher_no,
+            TeacherRoster.id != roster_id,
+        )
+        .first()
+    )
+    if duplicate:
+        raise HTTPException(status_code=400, detail="工号已存在")
+
+    row.teacher_no = teacher_no
+    row.real_name = real_name
+    row.is_enabled = payload.is_enabled
+    try:
+        db.commit()
+        db.refresh(row)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="工号已存在")
+
+    return ResponseModel(
+        data={
+            "id": row.id,
+            "teacher_no": row.teacher_no,
+            "real_name": row.real_name,
+            "is_enabled": row.is_enabled,
+            "imported_at": format_datetime(row.imported_at),
+            "updated_at": format_datetime(row.updated_at),
+        },
+        message="教师名单更新成功",
+    )
+
+
+@router.delete("/roster/teachers/{roster_id}", response_model=ResponseModel)
+def delete_teacher_roster(
+    roster_id: int,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage roster")
+
+    row = db.query(TeacherRoster).filter(TeacherRoster.id == roster_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="教师名单不存在")
+
+    db.delete(row)
+    db.commit()
+    return ResponseModel(message="教师名单删除成功")
 
 
 @router.get("/home", response_model=StudentHomeResponseModel)

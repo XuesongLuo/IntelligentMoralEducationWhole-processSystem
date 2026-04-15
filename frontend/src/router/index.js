@@ -20,6 +20,7 @@ import TeacherMoralExamHub from '@/views/teacher/TeacherMoralExamHub.vue'
 import TeacherResult from '@/views/teacher/TeacherResultList.vue'
 import TeacherResourceStudyHub from '@/views/teacher/TeacherResourceStudyHub.vue'
 import TeacherResourceStudyList from '@/views/teacher/TeacherResourceStudyList.vue'
+import TeacherRosterManage from '@/views/teacher/TeacherRosterManage.vue'
 
 import { useTeacherViewStore } from '@/stores/teacherView'
 import {
@@ -148,6 +149,11 @@ const routes = [
         name: 'TeacherResourceStudyList',
         component: TeacherResourceStudyList,
         props: true
+      },
+      {
+        path: 'roster-manage',
+        name: 'TeacherRosterManage',
+        component: TeacherRosterManage
       }
     ]
   },

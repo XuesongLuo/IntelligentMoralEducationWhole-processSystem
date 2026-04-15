@@ -18,7 +18,7 @@
         <div class="overview-grid">
           <div class="left-panel">
             <div class="student-meta">
-              <p>用户名：{{ homeData.studentId }}</p>
+              <p>用户号：{{ homeData.studentId }}</p>
               <p>姓名：{{ homeData.studentName }}</p>
             </div>
 
@@ -27,7 +27,7 @@
             </div>
 
             <div class="ai-time">
-              AI工具使用时长：{{ homeData.aiUsageDuration || '0时0分0秒' }}
+              AI 工具使用时长：{{ homeData.aiUsageDuration || '0时0分0秒' }}
             </div>
 
             <div class="completion">
@@ -62,7 +62,6 @@
           <div class="right-panel">
             <h3>思政课程成绩与提升</h3>
             <div class="score-list">
-              
               <div
                 v-for="item in radarScores"
                 :key="item.label"
@@ -73,19 +72,16 @@
               </div>
             </div>
             <ScoreRadarChart :score-dimensions="homeData.scoreDimensions" />
-            <!--div ref="radarChartRef" class="radar-chart"></div-->
           </div>
         </div>
-
       </el-card>
 
       <el-card class="nav-card" shadow="never">
         <div class="nav-actions">
-          <div 
+          <div
             class="nav-btn"
             :class="{ disabled: !isViewingSelf }"
             @click="goMoralExam"
-
           >
             <span>德育画像<br />构建与考试</span>
           </div>
@@ -94,6 +90,9 @@
           </div>
           <div class="nav-btn" @click="goStudy">
             <span>德育资源学习</span>
+          </div>
+          <div class="nav-btn roster-btn" @click="goRosterManage">
+            <span>预录入<br />名单管理</span>
           </div>
         </div>
       </el-card>
@@ -121,10 +120,8 @@ const homeData = ref({
   studentId: '',
   studentName: '',
   phone: '',
-
-  levelValue: 0, // 等级值，先写死，后续后端返回
-  aiUsageDuration: '', // AI使用时长，单位可自定
-
+  levelValue: 0,
+  aiUsageDuration: '',
   simulationCompletion: 0,
   studyProgressList: [],
   scoreDimensions: []
@@ -142,9 +139,7 @@ const radarScores = computed(() => {
         { label: '最好成绩', color: '#409eff' },
         { label: '最低成绩', color: '#e6a23c' }
       ]
-    : [
-        { label: '最好成绩', color: '#409eff' }
-      ]
+    : [{ label: '最好成绩', color: '#409eff' }]
 })
 
 function getProgressColor(val) {
@@ -177,21 +172,24 @@ function goStudy() {
   router.push('/teacher/resource-study')
 }
 
+function goRosterManage() {
+  router.push('/teacher/roster-manage')
+}
+
 async function loadData() {
   if (!selectedUser.value) return
 
   const localData = {
     studentId:
-    selectedUser.value.role === 'teacher'
-      ? selectedUser.value.teacher_no
-      : selectedUser.value.student_no,
+      selectedUser.value.role === 'teacher'
+        ? selectedUser.value.teacher_no
+        : selectedUser.value.student_no,
     studentName: selectedUser.value.real_name
   }
 
   try {
     const res = await getUserHomeData({ userId: selectedUser.value.id })
     const data = res.data?.data || res.data || {}
-
     homeData.value = {
       ...homeData.value,
       ...localData,
@@ -216,7 +214,6 @@ watch(
 
 onMounted(async () => {
   const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
-
   teacherViewStore.restore()
 
   const currentTeacher = {
@@ -230,8 +227,7 @@ onMounted(async () => {
   try {
     const res = await getTeacherStudentList()
     const apiList = Array.isArray(res.data) ? res.data : []
-
-   const mergedList = apiList.some(item => item.id === currentTeacher.id)
+    const mergedList = apiList.some(item => item.id === currentTeacher.id)
       ? apiList
       : [currentTeacher, ...apiList]
 
@@ -240,7 +236,7 @@ onMounted(async () => {
     } else {
       teacherViewStore.teacherUser = currentTeacher
       teacherViewStore.userList = mergedList
-      
+
       if (
         !teacherViewStore.selectedUser ||
         !mergedList.some(item => item.id === teacherViewStore.selectedUser.id)
@@ -254,59 +250,71 @@ onMounted(async () => {
     teacherViewStore.init(currentTeacher, [currentTeacher])
   }
 })
-
 </script>
 
 <style scoped>
 .teacher-page {
   display: flex;
-  justify-content: center; /* 居中内容 */
+  justify-content: center;
   background: #f5f7fa;
   min-height: calc(100vh - 64px);
-} 
+  position: relative;
+}
+
 .content {
   width: 1200px;
   margin: 0 auto;
   transition: all 0.3s;
   padding: 24px 20px;
+  position: relative;
+  z-index: 1200;
 }
+
 .overview-card,
 .nav-card {
   border-radius: 18px;
   margin-bottom: 56px;
 }
+
 .overview-grid {
   display: grid;
   grid-template-columns: 320px 1fr 360px;
   gap: 24px;
 }
+
 .student-meta p {
   margin: 6px 0;
   font-size: 18px;
 }
+
 .level-box {
   margin: 4px 0;
   min-height: 36px;
 }
+
 .ai-time {
   margin-bottom: 24px;
   font-size: 16px;
 }
+
 .completion {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
+
 .completion-label {
   margin-bottom: 12px;
   font-size: 16px;
 }
+
 .middle-panel h3,
 .right-panel h3 {
   margin-top: 0;
   margin-bottom: 18px;
   font-size: 28px;
 }
+
 .progress-row {
   display: grid;
   grid-template-columns: 140px 1fr 80px;
@@ -314,62 +322,72 @@ onMounted(async () => {
   gap: 12px;
   margin-bottom: 18px;
 }
+
 .label {
   font-size: 15px;
 }
+
 .remain {
   font-size: 14px;
   color: #666;
 }
+
 .score-list {
   display: flex;
   gap: 16px;
   margin-bottom: 18px;
 }
+
 .score-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .score-dot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-}
-.radar-chart {
-  width: 100%;
-  height: 300px;
 }
 
 .nav-actions {
   min-height: 240px;
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: space-between;
+  gap: 18px;
 }
+
 .nav-btn {
-  width: 180px;
-  height: 180px;
+  width: 170px;
+  height: 170px;
   border-radius: 50%;
   border: 2px solid #dcdfe6;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 30px;
+  font-size: 28px;
   cursor: pointer;
   transition: all 0.25s;
   background: #fff;
 }
+
+.roster-btn {
+  border-style: dashed;
+}
+
 .nav-btn:hover {
   transform: translateY(-4px);
   border-color: #409eff;
   color: #409eff;
 }
+
 .nav-btn.disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
 .page-mask {
   position: fixed;
   inset: 64px 0 0 0;
@@ -377,13 +395,7 @@ onMounted(async () => {
   background: rgba(18, 30, 48, 0.28);
   backdrop-filter: blur(2px);
 }
-.teacher-page {
-  position: relative;
-}
-.content {
-  position: relative;
-  z-index: 1200;
-}
+
 .content.dimmed {
   filter: brightness(0.88);
 }
