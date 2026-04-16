@@ -255,7 +255,8 @@ onMounted(async () => {
 }
 
 .content {
-  width: 1200px;
+  width: 75vw;
+  max-width: calc(100% - 72px);
   margin: 0 auto;
   transition: all 0.3s;
   padding: 24px 20px;
@@ -387,5 +388,12 @@ onMounted(async () => {
 
 .content.dimmed {
   filter: brightness(0.88);
+}
+
+@media (max-width: 960px) {
+  .content {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
 }
 </style>

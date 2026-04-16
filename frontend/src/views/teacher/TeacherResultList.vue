@@ -475,7 +475,8 @@ onMounted(async () => {
 }
 
 .main-box {
-  width: 1200px;
+  width: 75vw;
+  max-width: calc(100% - 72px);
   margin: 30px auto;
 }
 
@@ -516,7 +517,13 @@ h1 {
 .batch-export-type-group {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
+  width: 100%;
+}
+
+.batch-export-type-group :deep(.el-radio) {
+  margin-right: 0;
 }
 
 .global-export-form {
@@ -567,5 +574,12 @@ h1 {
 
 .content.dimmed {
   filter: brightness(0.88);
+}
+
+@media (max-width: 960px) {
+  .main-box {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
 }
 </style>

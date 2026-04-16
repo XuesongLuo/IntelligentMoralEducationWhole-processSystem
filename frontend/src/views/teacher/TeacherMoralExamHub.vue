@@ -10,9 +10,9 @@
         </div>
 
         <div class="module-actions">
-          <div class="triangle-btn" @click="goNotice('survey')">画像构建</div>
-          <div class="hexagon-btn" @click="goNotice('integrity')">诚信考核</div>
-          <div class="square-btn" @click="goNotice('ideology')">思政考试</div>
+          <div class="triangle-btn" @click="goNotice('survey')"><span>画像构建</span></div>
+          <div class="hexagon-btn" @click="goNotice('integrity')"><span>诚信考核</span></div>
+          <div class="square-btn" @click="goNotice('ideology')"><span>思政考试</span></div>
         </div>
       </el-card>
     </div>
@@ -56,7 +56,8 @@ function goNotice(type) {
   background: #f5f7fa;
 }
 .main-box {
-  width: 1100px;
+  width: 75vw;
+  max-width: calc(100% - 48px);
   margin: 30px auto;
 }
 h1 {
@@ -76,40 +77,95 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 84px;
+  gap: 72px;
 }
 .triangle-btn,
 .hexagon-btn,
 .square-btn {
   width: 232px;
   height: 232px;
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   text-align: center;
   font-size: 34px;
   line-height: 1.25;
-  padding: 16px;
+  font-weight: 500;
+  padding: 20px;
   cursor: pointer;
   transition: all 0.25s;
+  box-sizing: border-box;
+  color: #303133;
+}
+.triangle-btn::before,
+.triangle-btn::after,
+.hexagon-btn::before,
+.hexagon-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 .triangle-btn {
+  padding-top: 58px;
+}
+.triangle-btn::before {
+  background: #333;
   clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  border: 2px solid #333;
-  padding-top: 72px;
+}
+.triangle-btn::after {
+  inset: 3px;
+  background: #fff;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
 }
 .hexagon-btn {
+  padding-inline: 34px;
+}
+.hexagon-btn::before {
+  background: #333;
   clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
-  border: 2px solid #333;
+}
+.hexagon-btn::after {
+  inset: 3px;
+  background: #fff;
+  clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
 }
 .square-btn {
   border: 2px solid #333;
   border-radius: 24px;
+}
+.triangle-btn,
+.hexagon-btn {
+  isolation: isolate;
+}
+.triangle-btn,
+.hexagon-btn,
+.square-btn {
+  z-index: 0;
+}
+.triangle-btn span,
+.hexagon-btn span,
+.square-btn span {
+  position: relative;
+  z-index: 1;
 }
 .triangle-btn:hover,
 .hexagon-btn:hover,
 .square-btn:hover {
   color: #409eff;
   transform: translateY(-4px);
+}
+
+@media (max-width: 960px) {
+  .main-box {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
+
+  .module-actions {
+    flex-direction: column;
+    gap: 28px;
+  }
 }
 </style>

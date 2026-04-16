@@ -116,7 +116,8 @@ onBeforeUnmount(() => {
 }
 
 .resource-content {
-  width: min(1240px, calc(100% - 48px));
+  width: 75vw;
+  max-width: calc(100% - 48px);
   margin: 30px auto;
 }
 
@@ -242,6 +243,7 @@ h1 {
 @media (max-width: 720px) {
   .resource-content {
     width: calc(100% - 24px);
+    max-width: none;
   }
 
   h1 {

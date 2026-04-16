@@ -190,7 +190,8 @@ onMounted(() => {
   min-height: calc(100vh - 64px);
 } 
 .content {
-  width: 1200px;
+  width: 75vw;
+  max-width: calc(100% - 48px);
   margin: 0 auto;
   padding-top: 24px;
 }
@@ -318,5 +319,12 @@ onMounted(() => {
   transform: translateY(-4px);
   border-color: #409eff;
   color: #409eff;
+}
+
+@media (max-width: 960px) {
+  .content {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
 }
 </style>

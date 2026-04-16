@@ -259,7 +259,8 @@ onMounted(() => {
 }
 
 .main-box {
-  width: 1200px;
+  width: 75vw;
+  max-width: calc(100% - 72px);
   margin: 30px auto;
 }
 
@@ -288,5 +289,12 @@ h1 {
 
 .tabs-wrap {
   margin-top: 6px;
+}
+
+@media (max-width: 960px) {
+  .main-box {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
 }
 </style>
