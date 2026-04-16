@@ -22,6 +22,7 @@ from app.models.assessment_answer import AssessmentAnswer
 from app.models.assessment_paper import AssessmentPaper
 from app.models.assessment_paper_question import AssessmentPaperQuestion
 from app.models.assessment_question import AssessmentQuestion
+from app.schemas.common import ResponseModel
 from app.schemas.student import StudentHomeScoreDimension
 from app.schemas.exam import (
     ExamHeartbeatData,
