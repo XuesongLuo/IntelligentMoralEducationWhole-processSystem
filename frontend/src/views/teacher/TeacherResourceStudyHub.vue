@@ -211,7 +211,8 @@ onBeforeUnmount(() => {
 }
 
 .content {
-  width: min(1240px, calc(100% - 72px));
+  width: 75vw;
+  max-width: calc(100% - 72px);
   margin: 30px auto;
   position: relative;
   z-index: 1200;
@@ -351,6 +352,7 @@ h1 {
 @media (max-width: 720px) {
   .content {
     width: calc(100% - 24px);
+    max-width: none;
   }
 
   h1 {

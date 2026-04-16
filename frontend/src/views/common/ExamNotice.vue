@@ -104,8 +104,16 @@ onMounted(() => {
   background: #f5f7fa;
 }
 .main-box {
-  width: 1100px;
+  width: 75vw;
+  max-width: calc(100% - 48px);
   margin: 30px auto;
+}
+
+@media (max-width: 960px) {
+  .main-box {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
 }
 h1 {
   text-align: center;

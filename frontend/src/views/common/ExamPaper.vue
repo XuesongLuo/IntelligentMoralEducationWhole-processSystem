@@ -534,7 +534,8 @@ onBeforeUnmount(() => {
   background: #f5f7fa;
 }
 .main-box {
-  width: 1200px;
+  width: 75vw;
+  max-width: calc(100% - 48px);
   margin: 30px auto;
 }
 .title-row {
@@ -554,7 +555,7 @@ h1 {
   color: #303133;
 }
 .paper-panel {
-  min-height: 640px;
+  min-height: 760px;
   border-radius: 16px;
 }
 .paper-name {
@@ -564,7 +565,7 @@ h1 {
   margin-bottom: 20px;
 }
 .question-scroll {
-  height: 520px;
+  height: clamp(620px, 64vh, 820px);
   overflow-y: auto;
   padding: 6px 10px;
   border: 1px solid #ebeef5;
@@ -581,5 +582,27 @@ h1 {
   transform: translateX(-50%);
   top: 90px !important;
   min-width: 420px;
+}
+
+@media (max-width: 960px) {
+  .main-box {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
+
+  .title-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .timer-box {
+    position: static;
+  }
+
+  .question-scroll {
+    height: 620px;
+  }
 }
 </style>
