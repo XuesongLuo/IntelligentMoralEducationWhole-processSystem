@@ -56,6 +56,66 @@ export function getTeacherStudentList() {
   })
 }
 
+export function getStudentRosterList() {
+  return request({
+    url: '/teacher/roster/students',
+    method: 'get'
+  })
+}
+
+export function createStudentRoster(data) {
+  return request({
+    url: '/teacher/roster/students',
+    method: 'post',
+    data
+  })
+}
+
+export function updateStudentRoster(id, data) {
+  return request({
+    url: `/teacher/roster/students/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+export function deleteStudentRoster(id) {
+  return request({
+    url: `/teacher/roster/students/${id}`,
+    method: 'delete'
+  })
+}
+
+export function getTeacherRosterList() {
+  return request({
+    url: '/teacher/roster/teachers',
+    method: 'get'
+  })
+}
+
+export function createTeacherRoster(data) {
+  return request({
+    url: '/teacher/roster/teachers',
+    method: 'post',
+    data
+  })
+}
+
+export function updateTeacherRoster(id, data) {
+  return request({
+    url: `/teacher/roster/teachers/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+export function deleteTeacherRoster(id) {
+  return request({
+    url: `/teacher/roster/teachers/${id}`,
+    method: 'delete'
+  })
+}
+
 
 
 // 德育资源学习进度

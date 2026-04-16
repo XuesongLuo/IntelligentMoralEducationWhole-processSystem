@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from datetime import datetime
 import random
@@ -16,8 +17,10 @@ from app.models.student_user import StudentUser
 from app.models.teacher_user import TeacherUser
 from app.models.student_roster import StudentRoster
 from app.models.teacher_invite import TeacherInvite
+from app.models.teacher_roster import TeacherRoster
 from app.schemas.common import ResponseModel
 from app.schemas.auth import (
+    ForgotPasswordRequest,
     LoginRequest,
     LoginResponse,
     LoginResponseModel,
@@ -60,6 +63,10 @@ def sms_cooldown_key(phone: str) -> str:
     return f"auth:sms_cooldown:{phone}"
 
 
+def forgot_password_limit_key(username: str) -> str:
+    return f"auth:forgot_password_limit:{username}"
+
+
 def generate_sms_code() -> str:
     return f"{random.randint(0, 999999):06d}"
 
@@ -71,6 +78,21 @@ def verify_sms_code(phone: str, sms_code: str):
     if cached_code != sms_code:
         raise HTTPException(status_code=400, detail="验证码错误")
     redis_client.delete(sms_code_key(phone))
+
+
+def check_forgot_password_rate_limit(username: str):
+    settings = get_settings()
+    key = forgot_password_limit_key(username)
+    current = redis_client.get(key)
+    if current and int(current) >= settings.FORGOT_PASSWORD_LIMIT_MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=429,
+            detail="找回密码尝试过于频繁，请稍后再试",
+        )
+
+    current_count = redis_client.incr(key)
+    if current_count == 1:
+        redis_client.expire(key, settings.FORGOT_PASSWORD_LIMIT_WINDOW_SECONDS)
 
 # 短信验证
 @router.post("/send-code", response_model=ResponseModel)
@@ -129,7 +151,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="账号或密码错误",
+            detail="账号不存在",
         )
 
     if not user.is_active:
@@ -182,16 +204,20 @@ def register_student(payload: StudentRegisterRequest, db: Session = Depends(get_
         role="student",
         is_active=True,
     )
-    db.add(auth_user)
-    db.flush()
+    try:
+        db.add(auth_user)
+        db.flush()
 
-    student_user = StudentUser(
-        auth_user_id=auth_user.id,
-        student_no=payload.student_no,
-    )
-    db.add(student_user)
-    db.commit()
-    db.refresh(auth_user)
+        student_user = StudentUser(
+            auth_user_id=auth_user.id,
+            student_no=payload.student_no,
+        )
+        db.add(student_user)
+        db.commit()
+        db.refresh(auth_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="手机号或学号已注册")
 
     # 4. 直接签发 token
     token = create_access_token(subject=str(auth_user.id))
@@ -232,6 +258,14 @@ def register_teacher(payload: TeacherRegisterRequest, db: Session = Depends(get_
     if phone_exists or teacher_exists:
         raise HTTPException(status_code=400, detail="工号或手机号已注册")
 
+    roster = db.query(TeacherRoster).filter(
+        TeacherRoster.teacher_no == payload.teacher_no,
+        TeacherRoster.real_name == payload.real_name,
+        TeacherRoster.is_enabled == True
+    ).first()
+    if not roster:
+        raise HTTPException(status_code=400, detail="姓名与工号不匹配，不允许注册")
+
     auth_user = AuthUser(
         phone=payload.phone,
         password_hash=get_password_hash(payload.password),
@@ -239,21 +273,25 @@ def register_teacher(payload: TeacherRegisterRequest, db: Session = Depends(get_
         role="teacher",
         is_active=True,
     )
-    db.add(auth_user)
-    db.flush()
-    # 把邀请码标记为已使用
-    """
-    invite.is_used = True
-    invite.used_by_user_id = user.id
-    """
-    teacher_user = TeacherUser(
-        auth_user_id=auth_user.id,
-        teacher_no=payload.teacher_no,
-        teacher_invite_verified=True,
-    )
-    db.add(teacher_user)
-    db.commit()
-    db.refresh(auth_user)
+    try:
+        db.add(auth_user)
+        db.flush()
+        # 把邀请码标记为已使用
+        """
+        invite.is_used = True
+        invite.used_by_user_id = user.id
+        """
+        teacher_user = TeacherUser(
+            auth_user_id=auth_user.id,
+            teacher_no=payload.teacher_no,
+            teacher_invite_verified=True,
+        )
+        db.add(teacher_user)
+        db.commit()
+        db.refresh(auth_user)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="手机号或工号已注册")
 
     token = create_access_token(subject=str(auth_user.id))
     data = RegisterResponse(
@@ -274,3 +312,30 @@ def me(current_user: AuthUser = Depends(get_current_user)):
     return UserInfoResponseModel(
         data=build_user_info(current_user)
     )
+
+
+@router.post("/forgot-password", response_model=ResponseModel)
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    check_forgot_password_rate_limit(payload.username)
+
+    user = (
+        db.query(AuthUser)
+        .outerjoin(StudentUser, StudentUser.auth_user_id == AuthUser.id)
+        .outerjoin(TeacherUser, TeacherUser.auth_user_id == AuthUser.id)
+        .filter(
+            AuthUser.real_name == payload.realName,
+            or_(
+                StudentUser.student_no == payload.username,
+                TeacherUser.teacher_no == payload.username,
+            )
+        )
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(status_code=400, detail="姓名与学号/工号不匹配")
+
+    user.password_hash = get_password_hash(payload.newPassword)
+    db.commit()
+
+    return ResponseModel(message="密码重置成功")

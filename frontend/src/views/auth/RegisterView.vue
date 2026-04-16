@@ -9,6 +9,7 @@
                 :placeholder="form.role === 'student' ? '请输入学号' : '请输入工号'"
                 :status="status.no"
                 :error-message="errors.no"
+                @blur="validateField('no')"
             />
 
             <AuthInput
@@ -18,6 +19,7 @@
                 placeholder="设置6-18位登录密码"
                 :status="status.password"
                 :error-message="errors.password"
+                @blur="validateField('password')"
             />
 
             <AuthInput
@@ -27,6 +29,7 @@
                 placeholder="再次输入密码"
                 :status="status.confirmPassword"
                 :error-message="errors.confirmPassword"
+                @blur="validateField('confirmPassword')"
             />
 
             <AuthInput
@@ -35,6 +38,7 @@
                 placeholder="姓名验证，务必输入真实姓名"
                 :status="status.real_name"
                 :error-message="errors.real_name"
+                @blur="validateField('real_name')"
             />
 
             <AuthInput
@@ -43,6 +47,7 @@
                 placeholder="输入手机号"
                 :status="status.phone"
                 :error-message="errors.phone"
+                @blur="validateField('phone')"
             />
 
             <AuthInput
@@ -53,6 +58,7 @@
                 :status="status.smsCode"
                 :error-message="errors.smsCode"
                 @action="handleSendCode"
+                @blur="validateField('smsCode')"
             />
 
             <div class="role-selection-bar">
@@ -76,6 +82,7 @@
                             placeholder="请输入教师专属邀请码 (必填)"
                             :status="status.invite_code"
                             :error-message="errors.invite_code"
+                            @blur="validateField('invite_code')"
                         />
                     </div>
                 </div>
@@ -185,37 +192,73 @@ const smsActionText = computed(() => {
 
 function validate() {
     Object.keys(errors).forEach(key => errors[key] = '')
-    const currentNo = form.role === 'student' ? form.student_no : form.teacher_no
-
-    if (!currentNo) {
-        errors.no = form.role === 'student' ? '请输入学号' : '请输入工号'
-    } else if (!isStudentOrWorkNo(currentNo)) {
-        errors.no = form.role === 'student' ? '学号格式不正确' : '工号格式不正确'
-    }
-    if (!form.password) errors.password = '请输入密码'
-    else if (!isPassword(form.password)) errors.password = '密码长度需为6-18位'
-
-    if (form.confirmPassword !== form.password) errors.confirmPassword = '两次输入密码不一致'
-
-    if (!form.real_name) errors.real_name = '请输入真实姓名'
-
-    if (!form.phone) {
-        errors.phone = '请输入手机号'
-    } else if (!isPhone(form.phone)) {
-        errors.phone = '手机号格式不正确'
-    }
-
-    if (!form.smsCode) errors.smsCode = '请输入验证码'
-
-    if (form.role === 'teacher') {
-        if (!form.invite_code) {
-            errors.invite_code = '老师账号必须输入邀请码'
-        } else if (!isInviteCode(form.invite_code)) {
-            errors.invite_code = '邀请码格式不正确'
-        }
-    }
+    validateField('no')
+    validateField('password')
+    validateField('confirmPassword')
+    validateField('real_name')
+    validateField('phone')
+    validateField('smsCode')
+    if (form.role === 'teacher') validateField('invite_code')
     if (!form.agree) { alert('请先勾选服务条款'); return false }
     return Object.values(errors).every(item => !item)
+}
+
+function validateField(field) {
+    const currentNo = form.role === 'student' ? form.student_no : form.teacher_no
+
+    if (field === 'no') {
+        errors.no = ''
+        if (!currentNo) {
+            errors.no = form.role === 'student' ? '请输入学号' : '请输入工号'
+        } else if (!isStudentOrWorkNo(currentNo)) {
+            errors.no = form.role === 'student' ? '学号格式不正确' : '工号格式不正确'
+        }
+    }
+
+    if (field === 'password') {
+        errors.password = ''
+        if (!form.password) errors.password = '请输入密码'
+        else if (!/^.{6,10}$/.test(form.password)) errors.password = '密码长度需为6-10位'
+
+        if (form.confirmPassword) {
+            validateField('confirmPassword')
+        }
+    }
+
+    if (field === 'confirmPassword') {
+        errors.confirmPassword = ''
+        if (!form.confirmPassword) {
+            errors.confirmPassword = '请再次输入密码'
+        } else if (form.confirmPassword !== form.password) {
+            errors.confirmPassword = '两次输入密码不一致'
+        }
+    }
+
+    if (field === 'real_name') {
+        errors.real_name = ''
+        if (!form.real_name) errors.real_name = '请输入真实姓名'
+        else if (!isRealName(form.real_name)) errors.real_name = '姓名格式不正确'
+    }
+
+    if (field === 'phone') {
+        errors.phone = ''
+        if (!form.phone) errors.phone = '请输入手机号'
+        else if (!isPhone(form.phone)) errors.phone = '手机号格式不正确'
+    }
+
+    if (field === 'smsCode') {
+        errors.smsCode = ''
+        if (!form.smsCode) errors.smsCode = '请输入验证码'
+        else if (!isSmsCode(form.smsCode)) errors.smsCode = '验证码格式不正确'
+    }
+
+    if (field === 'invite_code') {
+        errors.invite_code = ''
+        if (form.role === 'teacher') {
+            if (!form.invite_code) errors.invite_code = '老师账号必须输入邀请码'
+            else if (!isInviteCode(form.invite_code)) errors.invite_code = '邀请码格式不正确'
+        }
+    }
 }
 
 // 短信验证码按钮点击计时

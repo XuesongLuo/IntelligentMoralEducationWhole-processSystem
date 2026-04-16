@@ -9,6 +9,7 @@
           :placeholder="placeholder"
           :model-value="modelValue"
           @input="$emit('update:modelValue', $event)"
+          @blur="$emit('blur')"
           class="styled-el-input"
         >
           <template #suffix v-if="actionText || $slots.suffix">
@@ -42,7 +43,7 @@ defineProps({
   actionText: String
 })
 
-defineEmits(['update:modelValue', 'action'])
+defineEmits(['update:modelValue', 'action', 'blur'])
 </script>
 
 <style scoped>

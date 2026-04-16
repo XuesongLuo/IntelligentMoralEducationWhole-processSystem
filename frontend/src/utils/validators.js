@@ -7,7 +7,7 @@ export function isStudentOrWorkNo(value) {
 }
 
 export function isPassword(value) {
-  return /^.{6,18}$/.test(value)
+  return /^.{6,10}$/.test(value)
 }
 
 export function isRealName(value) {

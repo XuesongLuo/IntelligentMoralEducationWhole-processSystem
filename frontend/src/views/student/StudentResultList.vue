@@ -1,6 +1,5 @@
 <template>
   <div class="page-wrap">
-
     <div class="main-box">
       <h1>结果查看</h1>
 
@@ -13,8 +12,8 @@
           <el-table-column type="index" label="序号" width="80" />
           <el-table-column prop="title" label="标题" />
           <el-table-column prop="submitTime" label="提交时间" width="220" />
-          <el-table-column prop="durationMinutes" label="答题时间(min)" width="140" />
-          <el-table-column label="操作" width="140">
+          <el-table-column prop="durationMinutes" label="答题时长(min)" width="140" />
+          <el-table-column label="操作" width="260">
             <template #default="{ row }">
               <el-button
                 v-if="row.analysisReady"
@@ -24,7 +23,18 @@
               >
                 点击查看
               </el-button>
-              <span v-else style="color:#999;">模型分析中</span>
+              <template v-else>
+                <span v-if="row.analysisStatus === 'failed'" class="status-failed">分析失败</span>
+                <span v-else class="status-pending">模型分析中...</span>
+                <el-button
+                  v-if="row.analysisStatus === 'failed'"
+                  type="danger"
+                  link
+                  @click="retryAnalysis(row)"
+                >
+                  重新分析
+                </el-button>
+              </template>
             </template>
           </el-table-column>
         </el-table>
@@ -51,8 +61,9 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { getExamResultList } from '@/api/exam'
+import { getExamResultList, retryExamResultAnalysis } from '@/api/exam'
 import ResultDetailDialog from '@/components/common/ResultDetailDialog.vue'
 
 const router = useRouter()
@@ -87,6 +98,17 @@ function openDetail(row) {
   dialogVisible.value = true
 }
 
+async function retryAnalysis(row) {
+  try {
+    await retryExamResultAnalysis(row.id)
+    ElMessage.success('已触发重新分析，请稍后刷新查看')
+    loadList()
+  } catch (error) {
+    const message = error?.response?.data?.detail || '重新分析失败，请稍后重试'
+    ElMessage.error(message)
+  }
+}
+
 onMounted(() => {
   loadList()
 })
@@ -97,22 +119,36 @@ onMounted(() => {
   min-height: 100vh;
   background: #f5f7fa;
 }
+
 .main-box {
   width: 1200px;
   margin: 30px auto;
 }
+
 h1 {
   text-align: center;
   font-size: 52px;
   margin-bottom: 24px;
 }
+
 .panel {
   border-radius: 16px;
   min-height: 560px;
 }
+
 .back-row {
   margin-bottom: 24px;
 }
+
+.status-pending {
+  color: #999;
+}
+
+.status-failed {
+  color: #f56c6c;
+  margin-right: 8px;
+}
+
 .pagination-row {
   margin-top: 24px;
   display: flex;

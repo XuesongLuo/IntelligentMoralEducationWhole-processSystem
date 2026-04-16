@@ -12,15 +12,27 @@ import ExamPaper from '@/views/common/ExamPaper.vue'
 import StudentHome from '@/views/student/StudentHome.vue'
 import StudentMoralExamHub from '@/views/student/StudentMoralExamHub.vue'
 import StudentResult from '@/views/student/StudentResultList.vue'
+import StudentResourceStudyHub from '@/views/student/StudentResourceStudyHub.vue'
+import StudentResourceStudyList from '@/views/student/StudentResourceStudyList.vue'
 
 import TeacherHome from '@/views/teacher/TeacherHome.vue'
 import TeacherMoralExamHub from '@/views/teacher/TeacherMoralExamHub.vue'
 import TeacherResult from '@/views/teacher/TeacherResultList.vue'
-
-
+import TeacherResourceStudyHub from '@/views/teacher/TeacherResourceStudyHub.vue'
+import TeacherResourceStudyList from '@/views/teacher/TeacherResourceStudyList.vue'
+import TeacherRosterManage from '@/views/teacher/TeacherRosterManage.vue'
 
 import { useTeacherViewStore } from '@/stores/teacherView'
-
+import {
+  buildExamPaperPath,
+  EXAM_BLOCKED_MESSAGE,
+  EXAM_LOGIN_RESUME_MESSAGE,
+  EXAM_RESUME_MESSAGE,
+  getActiveExamSession,
+  isExamPaperRoute,
+  notifyExamWarning,
+  shouldShowActiveExamNotice
+} from '@/utils/examSession'
 
 const routes = [
   {
@@ -45,12 +57,11 @@ const routes = [
     component: ForgotPassword,
     meta: { public: true }
   },
-
-  // 学生端
   {
     path: '/student',
     component: AppLayout,
     meta: { requiresAuth: true, role: 'student' },
+    redirect: '/student/home',
     children: [
       {
         path: 'home',
@@ -78,15 +89,25 @@ const routes = [
         path: 'results',
         name: 'StudentResults',
         component: StudentResult
+      },
+      {
+        path: 'resource-study',
+        name: 'StudentResourceStudyHub',
+        component: StudentResourceStudyHub
+      },
+      {
+        path: 'resource-study/:categoryId',
+        name: 'StudentResourceStudyList',
+        component: StudentResourceStudyList,
+        props: true
       }
     ]
   },
-
-  // 教师端
   {
     path: '/teacher',
     component: AppLayout,
     meta: { requiresAuth: true, role: 'teacher' },
+    redirect: '/teacher/home',
     children: [
       {
         path: 'home',
@@ -117,10 +138,25 @@ const routes = [
         path: 'results',
         name: 'TeacherResults',
         component: TeacherResult
+      },
+      {
+        path: 'resource-study',
+        name: 'TeacherResourceStudyHub',
+        component: TeacherResourceStudyHub
+      },
+      {
+        path: 'resource-study/:categoryId',
+        name: 'TeacherResourceStudyList',
+        component: TeacherResourceStudyList,
+        props: true
+      },
+      {
+        path: 'roster-manage',
+        name: 'TeacherRosterManage',
+        component: TeacherRosterManage
       }
     ]
   },
-
   {
     path: '/:pathMatch(.*)*',
     redirect: '/login'
@@ -135,18 +171,29 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   const token = localStorage.getItem('token')
+  const activeExamSession = getActiveExamSession()
 
-  // 1. 公共页面直接放行
+  if (
+    token &&
+    activeExamSession &&
+    activeExamSession.userId === userInfo.id &&
+    activeExamSession.role === userInfo.role
+  ) {
+    const activeExamPath = buildExamPaperPath(activeExamSession)
+    if (to.path !== activeExamPath) {
+      notifyExamWarning(EXAM_BLOCKED_MESSAGE)
+      return next(activeExamPath)
+    }
+  }
+
   if (to.meta.public) {
     return next()
   }
 
-  // 2. 需要登录但没登录，回登录页
   if (to.meta.requiresAuth && !token) {
     return next('/login')
   }
 
-  // 3. 角色校验
   if (to.meta.role) {
     const currentRole = userInfo.role
     if (!currentRole) {
@@ -161,23 +208,16 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 4. 老师端考试权限校验：只有查看自己时才能进入
   if (to.meta.teacherSelfOnly) {
     const teacherViewStore = useTeacherViewStore()
-
-    // 优先从 store 读
     let isViewingSelf = teacherViewStore.isViewingSelf
 
-    // 如果刷新后 store 丢了，就从 localStorage 兜底
     if (
       typeof isViewingSelf !== 'boolean' ||
       !teacherViewStore.teacherUser ||
       !teacherViewStore.selectedUser
     ) {
-      const teacherViewState = JSON.parse(
-        localStorage.getItem('teacherViewState') || '{}'
-      )
-
+      const teacherViewState = JSON.parse(localStorage.getItem('teacherViewState') || '{}')
       const teacherUserId = teacherViewState.teacherUser?.id
       const selectedUserId = teacherViewState.selectedUser?.id
 
@@ -193,6 +233,32 @@ router.beforeEach((to, from, next) => {
   }
 
   next()
+})
+
+router.afterEach(to => {
+  const token = localStorage.getItem('token')
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  const activeExamSession = getActiveExamSession()
+
+  if (!activeExamSession) {
+    return
+  }
+
+  const activeExamPath = buildExamPaperPath(activeExamSession)
+  if (to.path === activeExamPath || isExamPaperRoute(to)) {
+    return
+  }
+
+  if (token && activeExamSession.userId === userInfo.id && activeExamSession.role === userInfo.role) {
+    if (shouldShowActiveExamNotice(to.fullPath, activeExamPath)) {
+      notifyExamWarning(EXAM_RESUME_MESSAGE)
+    }
+    return
+  }
+
+  if (!token && shouldShowActiveExamNotice(to.fullPath, activeExamPath)) {
+    notifyExamWarning(EXAM_LOGIN_RESUME_MESSAGE)
+  }
 })
 
 export default router

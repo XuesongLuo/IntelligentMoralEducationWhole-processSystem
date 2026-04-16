@@ -1,4 +1,5 @@
-An environment file is configured but terminal environment injection is disabled. Enable "python.terminal.useEnvFile" to use environment variables from .env files in terminals.
+创建虚拟环境(不安装依赖)：
+python -m venv .venv --without-pip
 
 
 启动当前项目下的虚拟环境：
@@ -7,6 +8,10 @@ Windows:
 
 MacOS/Linux:
 source .venv/bin/activate
+
+
+安装依赖：
+pip install -r requirements.txt
 
 
 启动:

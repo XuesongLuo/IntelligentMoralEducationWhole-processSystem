@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, JSON, UniqueConstraint, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, UniqueConstraint, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.models.json_text import JSONText
 
 
 class AssessmentAIReport(Base):
@@ -35,7 +36,7 @@ class AssessmentAIReport(Base):
 
     total_score: Mapped[float | None] = mapped_column(nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    raw_response_json: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    raw_response_json: Mapped[dict | list | None] = mapped_column(JSONText, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

@@ -11,7 +11,7 @@
 
         <div class="notice-box">
           <div class="notice-inner">
-            <h3>{{ type === 'survey' ? '问卷须知：' : '考核须知：' }}</h3>
+            <h3>{{ noticeHeading }}</h3>
             <div v-if="noticeList.length">
               <p v-for="(item, index) in noticeList" :key="index">{{ index + 1 }}. {{ item }}</p>
             </div>
@@ -53,9 +53,27 @@ const routePrefix = computed(() => {
   return currentRole.value === 'teacher' ? '/teacher' : '/student'
 })
 
+const examMetaMap = {
+  survey: {
+    title: '画像构建',
+    noticeHeading: '问卷须知：'
+  },
+  integrity: {
+    title: '诚信考核',
+    noticeHeading: '考核须知：'
+  },
+  ideology: {
+    title: '思政考试',
+    noticeHeading: '考试须知：'
+  }
+}
 
 const pageTitle = computed(() => {
-  return type.value === 'survey' ? '画像构建' : '诚信考核'
+  return examMetaMap[type.value]?.title || '考试'
+})
+
+const noticeHeading = computed(() => {
+  return examMetaMap[type.value]?.noticeHeading || '考试须知：'
 })
 
 function goBack() {
@@ -113,9 +131,10 @@ h1 {
   border: 1px solid #dcdfe6;
   border-radius: 8px;
   padding: 24px;
-  text-align: center;
+  text-align: left;
 }
 .notice-inner p {
   line-height: 2;
+  margin: 0;
 }
 </style>

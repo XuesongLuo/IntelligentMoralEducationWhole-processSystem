@@ -8,7 +8,7 @@ import {
   mockGetExamResultDetail
 } from '@/mock'
 
-const USE_MOCK = true
+const USE_MOCK = false
 
 function getRolePrefix() {
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
@@ -40,14 +40,15 @@ export function getExamInfo(type) {
 }
 
 // 获取题目
-export function getExamPaper(type, examId) {
+export function getExamPaper(type, examId, clientSessionId) {
   if (USE_MOCK) {
     return mockGetExamPaper(type, examId)
   }
 
   return request({
     url: `${getRolePrefix()}/exam/${type}/paper/${examId}`,
-    method: 'get'
+    method: 'get',
+    params: clientSessionId ? { clientSessionId } : {}
   })
 }
 
@@ -59,6 +60,23 @@ export function submitExamPaper(data) {
 
   return request({
     url: `${getRolePrefix()}/exam/submit`,
+    method: 'post',
+    data
+  })
+}
+
+export function submitExamHeartbeat(data) {
+  if (USE_MOCK) {
+    return Promise.resolve({
+      data: {
+        activeSeconds: 0,
+        submitted: false
+      }
+    })
+  }
+
+  return request({
+    url: `${getRolePrefix()}/exam/heartbeat`,
     method: 'post',
     data
   })
@@ -86,6 +104,51 @@ export function getExamResultDetail(resultId, userId) {
   return request({
     url: `${getRolePrefix()}/exam/results/${resultId}`,
     method: 'get',
+    params: userId ? { userId } : {}
+  })
+}
+
+export function exportExamResult(resultId, userId) {
+  return request({
+    url: `${getRolePrefix()}/exam/results/${resultId}/export`,
+    method: 'get',
+    params: userId ? { userId } : {},
+    responseType: 'blob'
+  })
+}
+
+export function exportExamResultsByType(userId, paperType) {
+  return request({
+    url: `${getRolePrefix()}/exam/results/export/by-type`,
+    method: 'get',
+    params: {
+      userId,
+      paperType
+    },
+    responseType: 'blob'
+  })
+}
+
+export function getExportFilterOptions() {
+  return request({
+    url: `${getRolePrefix()}/exam/results/export/options`,
+    method: 'get'
+  })
+}
+
+export function exportExamResultsByFilter(data) {
+  return request({
+    url: `${getRolePrefix()}/exam/results/export/filter`,
+    method: 'post',
+    data,
+    responseType: 'blob'
+  })
+}
+
+export function retryExamResultAnalysis(resultId, userId) {
+  return request({
+    url: `${getRolePrefix()}/exam/results/${resultId}/retry-analysis`,
+    method: 'post',
     params: userId ? { userId } : {}
   })
 }

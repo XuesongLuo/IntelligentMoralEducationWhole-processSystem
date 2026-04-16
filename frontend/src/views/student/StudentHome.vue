@@ -97,7 +97,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserHomeData } from '@/api/user'
 import { parseLevel } from '@/utils/level'
-import { ElMessage } from 'element-plus'
 import LevelBadge from '@/components/common/LevelBadge.vue'
 import ScoreRadarChart from '@/components/common/ScoreRadarChart.vue'
 
@@ -151,8 +150,7 @@ function goResults() {
 }
 
 function goStudy() {
-  ElMessage.info('德育资源学习页面开发中')
-  //router.push('/student/resource-study')
+  router.push('/student/resource-study')
 }
 
 async function loadData() {

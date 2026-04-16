@@ -46,6 +46,7 @@
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
 import AuthInput from '@/components/auth/AuthInput.vue'
@@ -121,7 +122,8 @@ async function handleLogin() {
     
         router.push(role === 'teacher' ? '/teacher/home' : '/student/home')
     } catch (error) {
-            alert(
+            ElMessage.error(
+                error?.response?.data?.detail ||
                 error?.response?.data?.message ||
                 error?.message ||
                 '登录失败，请检查账号或密码'
