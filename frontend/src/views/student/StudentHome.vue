@@ -202,7 +202,8 @@ onMounted(() => {
 }
 .overview-grid {
   display: grid;
-  grid-template-columns: 320px 1fr 360px;
+  grid-template-columns: 320px minmax(420px, 640px) 360px;
+  justify-content: space-between;
   gap: 24px;
 }
 .student-meta p {
@@ -297,9 +298,11 @@ onMounted(() => {
 }
 .nav-actions {
   min-height: 240px;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   align-items: center;
-  justify-content: space-around;
+  justify-items: center;
+  gap: 24px;
 }
 .nav-btn {
   width: 180px;
@@ -325,6 +328,11 @@ onMounted(() => {
   .content {
     width: calc(100% - 24px);
     max-width: none;
+  }
+
+  .overview-grid,
+  .nav-actions {
+    grid-template-columns: 1fr;
   }
 }
 </style>
