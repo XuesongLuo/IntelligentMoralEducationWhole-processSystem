@@ -70,7 +70,7 @@ class ResourceVisitResponseModel(ResponseModel):
 
 class ResourceUpsertRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
-    url: str = Field(min_length=1)
+    url: str = ""
 
 
 class ResourceVisibilityRequest(BaseModel):

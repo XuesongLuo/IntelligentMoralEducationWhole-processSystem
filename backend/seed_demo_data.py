@@ -3,11 +3,10 @@
 python seed_demo_data.py
 """
 
-from datetime import datetime, timedelta
-
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
+from app.data.learning_resources import CATEGORY_DATA, LEGACY_DEMO_RESOURCE_TITLES, REAL_RESOURCE_DATA
 from app.core.security import get_password_hash
 from app.models.auth_user import AuthUser
 from app.models.learning_resource import LearningResource
@@ -16,52 +15,9 @@ from app.models.student_roster import StudentRoster
 from app.models.student_user import StudentUser
 from app.models.teacher_roster import TeacherRoster
 from app.models.teacher_user import TeacherUser
-from app.models.user_resource_record import UserResourceRecord
 
 
 DEFAULT_PASSWORD = "123456"
-
-CATEGORY_DATA = [
-    {"code": "doctor_patient_dispute", "name": "医患纠纷处理", "sort_order": 1},
-    {"code": "research_fraud", "name": "科研数据造假诱惑", "sort_order": 2},
-    {"code": "medical_fairness", "name": "医疗资源分配公平性", "sort_order": 3},
-    {"code": "privacy_protection", "name": "隐私保护困境", "sort_order": 4},
-    {"code": "teamwork_conflict", "name": "团队协作冲突", "sort_order": 5},
-    {"code": "public_health_response", "name": "公共卫生事件应对", "sort_order": 6},
-]
-
-RESOURCE_DATA = {
-    "doctor_patient_dispute": [
-        {"title": "医患纠纷案例分析", "url": "https://www.bilibili.com/video/BV1V1cHe1EsQ?spm_id_from=333.788.videopod.episodes&p=1"},
-        {"title": "医患沟通技巧训练", "url": "https://www.bilibili.com/video/BV1V1cHe1EsQ?spm_id_from=333.788.videopod.episodes&p=27"},
-        {"title": "临床冲突处置流程", "url": "https://www.bilibili.com/video/BV1V1cHe1EsQ?spm_id_from=333.788.videopod.episodes&p=2"},
-    ],
-    "research_fraud": [
-        {"title": "科研诚信规范导读", "url": "https://www.bilibili.com/video/BV1CjmEB3EAk?spm_id_from=333.788.videopod.sections"},
-        {"title": "数据造假典型案例", "url": "https://www.bilibili.com/video/BV1nh4y1S7mC/?spm_id_from=333.337.videopod.sections"},
-        {"title": "论文署名与引用规范", "url": "https://www.bilibili.com/video/BV1eg4y1z7kB/?spm_id_from=333.337.videopod.sections"},
-    ],
-    "medical_fairness": [
-        {"title": "医疗资源公平分配讨论", "url": "https://www.bilibili.com/video/BV1fR4y1d7N5/?spm_id_from=333.337.videopod.sections"},
-        {"title": "稀缺床位分配案例", "url": "https://www.bilibili.com/video/BV1VK411z7ec/?spm_id_from=333.337.videopod.sections"},
-        {"title": "基层与三甲医疗资源对比", "url": "https://www.bilibili.com/video/BV1qp4y157sj/?spm_id_from=333.337.videopod.sections"},
-    ],
-    "privacy_protection": [
-        {"title": "患者隐私保护规范", "url": "https://www.bilibili.com/video/BV1Y5YPzNEeQ/?spm_id_from=333.337.videopod.sections"},
-        {"title": "病例信息脱敏基础", "url": "https://www.bilibili.com/video/BV1Hh4y197da/?spm_id_from=333.337.videopod.sections"},
-        {"title": "电子病历权限控制", "url": "https://www.bilibili.com/video/BV1p34y1F7U2/?spm_id_from=333.337.videopod.sections"},
-    ],
-    "teamwork_conflict": [
-        {"title": "医疗团队沟通协作", "url": "https://www.bilibili.com/video/BV1qce8eWEK2/?spm_id_from=333.337.videopod.sections"},
-        {"title": "跨学科合作冲突处理", "url": "https://www.bilibili.com/video/BV1wQ4y1U7Ko/?spm_id_from=333.337.videopod.sections"},
-        {"title": "值班交接中的责任边界", "url": "https://www.bilibili.com/video/BV1SzWnzSEkW/?spm_id_from=333.337.videopod.sections"},
-    ],
-    "public_health_response": [
-        {"title": "公共卫生事件应急流程", "url": "https://www.bilibili.com/video/BV1op4y1D7BR/?spm_id_from=333.337.videopod.sections"},
-        {"title": "突发疫情中的职业伦理", "url": "https://www.bilibili.com/video/BV1GE411x7Gk/?spm_id_from=333.337.videopod.sections"},
-        {"title": "群体性事件舆情应对", "url": "https://www.bilibili.com/video/BV1uM4y1i7AB/?spm_id_from=333.337.videopod.sections"},
-    ],
-}
 
 USER_DATA = {
     "teacher": {
@@ -214,23 +170,22 @@ def seed_categories(db: Session) -> dict[str, ResourceCategory]:
 
 def seed_resources(
     db: Session,
-    teacher_user_id: int,
+    teacher_user_id: int | None,
     categories: dict[str, ResourceCategory],
 ) -> dict[str, list[LearningResource]]:
     result: dict[str, list[LearningResource]] = {}
-    for category_code, items in RESOURCE_DATA.items():
+    for category_code, items in REAL_RESOURCE_DATA.items():
         category = categories[category_code]
         result[category_code] = []
         for idx, item in enumerate(items, start=1):
-            resource = (
-                db.query(LearningResource)
-                .filter(
-                    LearningResource.category_id == category.id,
-                    LearningResource.title == item["title"],
-                )
-                .first()
-            )
+            resource_query = db.query(LearningResource).filter(LearningResource.category_id == category.id)
+            if item["url"]:
+                resource_query = resource_query.filter(LearningResource.url == item["url"])
+            else:
+                resource_query = resource_query.filter(LearningResource.title == item["title"])
+            resource = resource_query.first()
             if resource:
+                resource.title = item["title"]
                 resource.url = item["url"]
                 resource.sort_order = idx
                 resource.is_visible = True
@@ -248,93 +203,23 @@ def seed_resources(
                 db.add(resource)
                 db.flush()
             result[category_code].append(resource)
+
+        cleanup_legacy_demo_resources(db, category.id, {item["url"] for item in items})
     return result
 
 
-def ensure_user_resource_record(
-    db: Session,
-    *,
-    user_id: int,
-    resource_id: int,
-    click_count: int,
-    is_completed: bool,
-    first_clicked_at: datetime,
-    last_clicked_at: datetime,
-) -> UserResourceRecord:
-    record = (
-        db.query(UserResourceRecord)
+def cleanup_legacy_demo_resources(db: Session, category_id: int, real_urls: set[str]) -> None:
+    legacy_resources = (
+        db.query(LearningResource)
         .filter(
-            UserResourceRecord.user_id == user_id,
-            UserResourceRecord.resource_id == resource_id,
+            LearningResource.category_id == category_id,
+            LearningResource.title.in_(LEGACY_DEMO_RESOURCE_TITLES),
         )
-        .first()
+        .all()
     )
-
-    if record:
-        record.click_count = click_count
-        record.is_completed = is_completed
-        record.first_clicked_at = first_clicked_at
-        record.last_clicked_at = last_clicked_at
-        return record
-
-    record = UserResourceRecord(
-        user_id=user_id,
-        resource_id=resource_id,
-        click_count=click_count,
-        is_completed=is_completed,
-        first_clicked_at=first_clicked_at,
-        last_clicked_at=last_clicked_at,
-    )
-    db.add(record)
-    db.flush()
-    return record
-
-
-def seed_resource_records(
-    db: Session,
-    *,
-    zhangsan_user_id: int,
-    lisi_user_id: int,
-    resource_map: dict[str, list[LearningResource]],
-) -> None:
-    now = datetime.utcnow()
-    zhangsan_done = {
-        "doctor_patient_dispute": [0, 1, 2],
-        "research_fraud": [0, 1],
-        "medical_fairness": [0, 1],
-        "privacy_protection": [0],
-        "teamwork_conflict": [0, 1],
-        "public_health_response": [0],
-    }
-    for category_code, indexes in zhangsan_done.items():
-        for idx in indexes:
-            resource = resource_map[category_code][idx]
-            ensure_user_resource_record(
-                db,
-                user_id=zhangsan_user_id,
-                resource_id=resource.id,
-                click_count=idx + 1,
-                is_completed=True,
-                first_clicked_at=now - timedelta(days=10 - idx),
-                last_clicked_at=now - timedelta(days=2),
-            )
-
-    lisi_done = {
-        "doctor_patient_dispute": [0],
-        "research_fraud": [0],
-    }
-    for category_code, indexes in lisi_done.items():
-        for idx in indexes:
-            resource = resource_map[category_code][idx]
-            ensure_user_resource_record(
-                db,
-                user_id=lisi_user_id,
-                resource_id=resource.id,
-                click_count=1,
-                is_completed=True,
-                first_clicked_at=now - timedelta(days=5),
-                last_clicked_at=now - timedelta(days=4),
-            )
+    for resource in legacy_resources:
+        if resource.url not in real_urls:
+            db.delete(resource)
 
 
 def main() -> None:
@@ -394,15 +279,7 @@ def main() -> None:
         categories = seed_categories(db)
         db.commit()
 
-        resource_map = seed_resources(db, teacher_auth.id, categories)
-        db.commit()
-
-        seed_resource_records(
-            db,
-            zhangsan_user_id=zhangsan_auth.id,
-            lisi_user_id=lisi_auth.id,
-            resource_map=resource_map,
-        )
+        seed_resources(db, teacher_auth.id, categories)
         db.commit()
 
         print("测试数据写入完成。")

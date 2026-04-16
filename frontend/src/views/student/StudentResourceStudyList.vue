@@ -29,7 +29,7 @@
           </el-table-column>
           <el-table-column label="点击跳转" width="150">
             <template #default="{ row }">
-              <el-button type="primary" @click="openResource(row)">
+              <el-button type="primary" :disabled="!row.url" @click="openResource(row)">
                 点击跳转
               </el-button>
             </template>
@@ -93,6 +93,11 @@ async function loadResources() {
 }
 
 async function openResource(row) {
+  if (!row.url) {
+    ElMessage.warning('该资源暂未配置链接')
+    return
+  }
+
   try {
     const res = await visitResource(row.id)
     const data = res.data?.data || res.data || {}
