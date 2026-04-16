@@ -1290,6 +1290,24 @@ def update_teacher_resource_visibility(
     )
 
 
+@router.delete("/resources/{resource_id}", response_model=ResponseModel)
+def delete_teacher_resource(
+    resource_id: int,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage resources")
+
+    resource = db.query(LearningResource).filter(LearningResource.id == resource_id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="resource not found")
+
+    db.delete(resource)
+    db.commit()
+    return ResponseModel(message="resource deleted")
+
+
 @router.get("/exam/{exam_type}/notice", response_model=ExamNoticeResponseModel)
 def get_teacher_exam_notice(
     exam_type: str,
