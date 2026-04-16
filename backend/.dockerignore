@@ -9,3 +9,5 @@ venv/
 .venv/
 .git
 .gitignore
+node_modules/
+dist/
