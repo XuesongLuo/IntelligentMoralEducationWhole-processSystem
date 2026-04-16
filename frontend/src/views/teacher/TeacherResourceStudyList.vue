@@ -95,8 +95,20 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitDialog">保存</el-button>
+        <div class="dialog-footer">
+          <el-button
+            v-if="editingRow"
+            type="danger"
+            plain
+            @click="handleDeleteResource"
+          >
+            删除
+          </el-button>
+          <div class="dialog-actions">
+            <el-button @click="dialogVisible = false">取消</el-button>
+            <el-button type="primary" @click="submitDialog">保存</el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -105,13 +117,14 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { storeToRefs } from 'pinia'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
 import { useTeacherViewStore } from '@/stores/teacherView'
 import { getTeacherStudentList } from '@/api/user'
 import {
   createResourceItem,
+  deleteResourceItem,
   getResourceItems,
   submitResourceHeartbeat,
   updateResourceItem,
@@ -245,6 +258,37 @@ async function submitDialog() {
     loadResources()
   } catch (error) {
     ElMessage.error('保存资源失败')
+  }
+}
+
+async function handleDeleteResource() {
+  if (!editingRow.value) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确认删除资源“${editingRow.value.title}”吗？删除后学生的学习记录也会随之移除。`,
+      '删除资源',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+  } catch (error) {
+    return
+  }
+
+  try {
+    await deleteResourceItem(editingRow.value.id)
+    ElMessage.success('资源已删除')
+    dialogVisible.value = false
+    if (records.value.length === 1 && pageNum.value > 1) {
+      pageNum.value -= 1
+    }
+    loadResources()
+  } catch (error) {
+    ElMessage.error('删除资源失败')
   }
 }
 
@@ -416,6 +460,18 @@ h1 {
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .page-mask {

@@ -59,3 +59,10 @@ export function updateResourceVisibility(resourceId, isVisible) {
     data: { isVisible }
   })
 }
+
+export function deleteResourceItem(resourceId) {
+  return request({
+    url: '/teacher/resources/' + resourceId,
+    method: 'delete'
+  })
+}
