@@ -522,6 +522,8 @@ def visit_student_resource(
     )
     if not resource:
         raise HTTPException(status_code=404, detail="resource not found")
+    if not resource.url.strip():
+        raise HTTPException(status_code=400, detail="resource link is not configured")
 
     record = mark_resource_completed(db, user_id=current_user.id, resource=resource)
     db.commit()

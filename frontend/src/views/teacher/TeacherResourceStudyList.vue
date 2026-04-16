@@ -53,7 +53,7 @@
           </el-table-column>
           <el-table-column label="点击跳转" width="150">
             <template #default="{ row }">
-              <el-button type="primary" plain @click="openResource(row)">
+              <el-button type="primary" plain :disabled="!row.url" @click="openResource(row)">
                 点击跳转
               </el-button>
             </template>
@@ -91,7 +91,7 @@
           <el-input v-model.trim="form.title" maxlength="255" />
         </el-form-item>
         <el-form-item label="链接地址">
-          <el-input v-model.trim="form.url" placeholder="https://example.com" />
+          <el-input v-model.trim="form.url" placeholder="可稍后补充" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -175,6 +175,11 @@ async function loadResources() {
 }
 
 async function openResource(row) {
+  if (!row.url) {
+    ElMessage.warning('该资源暂未配置链接')
+    return
+  }
+
   try {
     if (isViewingSelf.value) {
       const res = await visitResource(row.id)
@@ -217,8 +222,8 @@ function openEditDialog(row) {
 }
 
 async function submitDialog() {
-  if (!form.title || !form.url) {
-    ElMessage.warning('请完整填写标题和链接地址')
+  if (!form.title) {
+    ElMessage.warning('请填写标题')
     return
   }
 
