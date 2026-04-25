@@ -24,6 +24,13 @@ const radarIndicators = computed(() => {
   }))
 })
 
+function formatIndicatorName(name) {
+  const text = String(name || '')
+  if (text.length <= 6) return text
+  const midpoint = Math.ceil(text.length / 2)
+  return `${text.slice(0, midpoint)}\n${text.slice(midpoint)}`
+}
+
 const bestScoreValues = computed(() => {
   return (props.scoreDimensions || []).map(item => Number(item.best || 0))
 })
@@ -98,13 +105,17 @@ function renderChart() {
       show: false
     },
     radar: {
-      radius: '62%',
-      center: ['50%', '55%'],
-      indicator: radarIndicators.value,
+      radius: '54%',
+      center: ['50%', '54%'],
+      indicator: radarIndicators.value.map(item => ({
+        ...item,
+        name: formatIndicatorName(item.name)
+      })),
       splitNumber: 5,
       axisName: {
         color: '#333',
-        fontSize: 14
+        fontSize: 13,
+        lineHeight: 18
       },
       splitArea: {
         areaStyle: {
