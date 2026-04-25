@@ -927,6 +927,10 @@ def get_teacher_roster_list(
                 "teacher_no": row.teacher_no,
                 "real_name": row.real_name,
                 "is_enabled": row.is_enabled,
+                "is_current_user": bool(
+                    current_user.teacher_profile
+                    and row.teacher_no == current_user.teacher_profile.teacher_no
+                ),
                 "imported_at": format_datetime(row.imported_at),
                 "updated_at": format_datetime(row.updated_at),
             }
@@ -943,6 +947,9 @@ def create_teacher_roster(
 ):
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="only teachers can manage roster")
+
+    if current_user.teacher_profile and row.teacher_no == current_user.teacher_profile.teacher_no:
+        raise HTTPException(status_code=403, detail="current teacher cannot modify own roster entry")
 
     teacher_no = payload.teacher_no.strip()
     real_name = payload.real_name.strip()
@@ -1044,6 +1051,9 @@ def delete_teacher_roster(
     row = db.query(TeacherRoster).filter(TeacherRoster.id == roster_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="教师名单不存在")
+
+    if current_user.teacher_profile and row.teacher_no == current_user.teacher_profile.teacher_no:
+        raise HTTPException(status_code=403, detail="current teacher cannot modify own roster entry")
 
     db.delete(row)
     db.commit()
