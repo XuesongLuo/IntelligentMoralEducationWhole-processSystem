@@ -116,11 +116,11 @@ const radarScores = computed(() => {
 
   return hasWorst
     ? [
-        { label: '最好成绩', color: '#409eff' },
-        { label: '最低成绩', color: '#e6a23c' }
+        { label: '提升后成绩', color: '#409eff' },
+        { label: '初始成绩', color: '#e6a23c' }
       ]
     : [
-        { label: '最好成绩', color: '#409eff' }
+        { label: '提升后成绩', color: '#409eff' }
       ]
 })
 

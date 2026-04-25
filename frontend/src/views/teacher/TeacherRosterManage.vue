@@ -36,10 +36,16 @@
           </el-tab-pane>
 
           <el-tab-pane label="老师预录入名单" name="teacher">
-            <el-table :data="teacherRows" border stripe>
+            <el-table :data="teacherRows" border stripe row-class-name="teacher-row-class">
               <el-table-column type="index" label="序号" width="70" />
               <el-table-column prop="teacher_no" label="工号" width="180" />
               <el-table-column prop="real_name" label="姓名" width="160" />
+              <el-table-column label="标记" width="120">
+                <template #default="{ row }">
+                  <el-tag v-if="row.is_current_user" type="warning">当前登录</el-tag>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
               <el-table-column label="状态" width="100">
                 <template #default="{ row }">
                   <el-tag :type="row.is_enabled ? 'success' : 'info'">
@@ -48,10 +54,24 @@
                 </template>
               </el-table-column>
               <el-table-column prop="updated_at" label="更新时间" />
-              <el-table-column label="操作" width="180">
+              <el-table-column label="操作" width="200">
                 <template #default="{ row }">
-                  <el-button type="primary" link @click="openEditDialog('teacher', row)">编辑</el-button>
-                  <el-button type="danger" link @click="removeTeacher(row)">删除</el-button>
+                  <el-button
+                    type="primary"
+                    link
+                    :disabled="row.is_current_user"
+                    @click="openEditDialog('teacher', row)"
+                  >
+                    编辑
+                  </el-button>
+                  <el-button
+                    type="danger"
+                    link
+                    :disabled="row.is_current_user"
+                    @click="removeTeacher(row)"
+                  >
+                    删除
+                  </el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -119,6 +139,11 @@ const form = reactive({
   is_enabled: true
 })
 
+const selfTeacherNo = computed(() => {
+  const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  return localUser.teacher_no || ''
+})
+
 const dialogTitle = computed(() => {
   const target = dialogType.value === 'student' ? '学生' : '老师'
   return `${dialogMode.value === 'create' ? '新增' : '编辑'}${target}名单`
@@ -134,13 +159,20 @@ function resetForm() {
   form.is_enabled = true
 }
 
+function normalizeTeacherRows(rows) {
+  return (rows || []).map(row => ({
+    ...row,
+    is_current_user: Boolean(row.is_current_user || (selfTeacherNo.value && row.teacher_no === selfTeacherNo.value))
+  }))
+}
+
 async function loadAll() {
   const [studentRes, teacherRes] = await Promise.all([
     getStudentRosterList(),
     getTeacherRosterList()
   ])
   studentRows.value = studentRes.data || []
-  teacherRows.value = teacherRes.data || []
+  teacherRows.value = normalizeTeacherRows(teacherRes.data)
 }
 
 function openCreateDialog(type) {
@@ -152,6 +184,11 @@ function openCreateDialog(type) {
 }
 
 function openEditDialog(type, row) {
+  if (type === 'teacher' && row.is_current_user) {
+    ElMessage.warning('不允许操作当前登录老师自己的预录入名单')
+    return
+  }
+
   dialogMode.value = 'edit'
   dialogType.value = type
   editingId.value = row.id
@@ -230,6 +267,11 @@ async function removeStudent(row) {
 }
 
 async function removeTeacher(row) {
+  if (row.is_current_user) {
+    ElMessage.warning('不允许操作当前登录老师自己的预录入名单')
+    return
+  }
+
   try {
     await ElMessageBox.confirm(`确认删除老师 ${row.teacher_no} ${row.real_name} 吗？`, '删除确认', {
       type: 'warning'
@@ -294,6 +336,10 @@ h1 {
 
 .tabs-wrap {
   margin-top: 6px;
+}
+
+:deep(.el-button.is-disabled.is-link) {
+  opacity: 0.45;
 }
 
 @media (max-width: 960px) {
