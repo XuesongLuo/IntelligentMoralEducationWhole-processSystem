@@ -1,3 +1,8 @@
+"""
+测试数据导入脚本，执行方式：
+python import_assessment_bank_from_excel.py
+"""
+
 from __future__ import annotations
 
 import argparse

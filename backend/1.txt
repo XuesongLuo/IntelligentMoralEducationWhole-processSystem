@@ -18,3 +18,5 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 
 
+取消虚拟环境
+deactivate
