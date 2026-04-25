@@ -254,12 +254,9 @@ onMounted(() => {
 
 <style scoped>
 .page-wrap {
-  min-height: 100vh;
-  background: #f5f7fa;
-}
-
-.teacher-page {
   min-height: calc(100vh - 64px);
+  background: #f5f7fa;
+  overflow-x: hidden;
 }
 
 .main-box {
@@ -284,11 +281,15 @@ h1 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 18px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .right-actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .tabs-wrap {
@@ -299,6 +300,11 @@ h1 {
   .main-box {
     width: calc(100% - 20px);
     max-width: none;
+  }
+
+  .toolbar-row,
+  .right-actions {
+    align-items: stretch;
   }
 }
 </style>
