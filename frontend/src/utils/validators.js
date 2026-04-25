@@ -2,8 +2,16 @@ export function isPhone(value) {
   return /^1[3-9]\d{9}$/.test(value)
 }
 
+export function isStudentNo(value) {
+  return /^[A-Za-z]\d{9}$/.test(String(value || '').trim())
+}
+
+export function isTeacherNo(value) {
+  return String(value || '').trim().length > 0
+}
+
 export function isStudentOrWorkNo(value) {
-  return /^[A-Za-z0-9]{4,20}$/.test(value)
+  return isStudentNo(value) || isTeacherNo(value)
 }
 
 export function isPassword(value) {
