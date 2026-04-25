@@ -105,8 +105,8 @@ function renderChart() {
       show: false
     },
     radar: {
-      radius: '54%',
-      center: ['50%', '54%'],
+      radius: '62%',
+      center: ['50%', '55%'],
       indicator: radarIndicators.value.map(item => ({
         ...item,
         name: formatIndicatorName(item.name)
