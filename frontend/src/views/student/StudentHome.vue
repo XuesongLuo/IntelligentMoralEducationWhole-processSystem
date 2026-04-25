@@ -194,7 +194,7 @@ onMounted(() => {
 
 .overview-grid {
   display: grid;
-  grid-template-columns: minmax(240px, 0.9fr) minmax(320px, 1.25fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(240px, 0.88fr) minmax(300px, 1.15fr) minmax(340px, 1.08fr);
   align-items: start;
   gap: 20px;
 }
@@ -310,7 +310,7 @@ onMounted(() => {
 
 @media (max-width: 1440px) {
   .overview-grid {
-    grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.15fr) minmax(240px, 0.95fr);
+    grid-template-columns: minmax(220px, 0.86fr) minmax(260px, 1.05fr) minmax(320px, 1fr);
   }
 }
 
