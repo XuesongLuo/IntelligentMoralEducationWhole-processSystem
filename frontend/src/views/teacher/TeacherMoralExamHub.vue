@@ -52,13 +52,14 @@ function goNotice(type) {
 
 <style scoped>
 .page-wrap {
-  min-height: 100vh;
+  min-height: calc(100vh - 64px);
   background: #f5f7fa;
+  overflow-x: hidden;
 }
 .main-box {
-  width: 75vw;
-  max-width: calc(100% - 48px);
-  margin: 30px auto;
+  width: min(72vw, calc(100% - 32px));
+  max-width: 1380px;
+  margin: 20px auto;
 }
 h1 {
   text-align: center;
@@ -77,7 +78,8 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 72px;
+  gap: clamp(28px, 4vw, 56px);
+  flex-wrap: wrap;
 }
 .triangle-btn,
 .hexagon-btn,
@@ -159,7 +161,7 @@ h1 {
 
 @media (max-width: 960px) {
   .main-box {
-    width: calc(100% - 24px);
+    width: calc(100% - 20px);
     max-width: none;
   }
 

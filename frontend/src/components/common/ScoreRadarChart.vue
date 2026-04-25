@@ -162,6 +162,6 @@ onBeforeUnmount(() => {
 <style scoped>
 .radar-chart {
   width: 100%;
-  height: 300px;
+  height: clamp(220px, 26vh, 280px);
 }
 </style>
