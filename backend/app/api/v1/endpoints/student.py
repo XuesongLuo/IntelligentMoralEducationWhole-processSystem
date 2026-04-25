@@ -185,14 +185,27 @@ def get_active_paper(db: Session, exam_type: str) -> AssessmentPaper | None:
 
 def get_fixed_paper_for_user(db: Session, user_id: int, exam_type: str) -> AssessmentPaper:
     if exam_type in {"integrity", "ideology"}:
-        paper = (
+        completed_count = (
+            db.query(func.count(AssessmentAttempt.id))
+            .filter(
+                AssessmentAttempt.user_id == user_id,
+                AssessmentAttempt.paper_type == exam_type,
+                AssessmentAttempt.submitted_at.isnot(None),
+            )
+            .scalar()
+            or 0
+        )
+        paper_query = (
             db.query(AssessmentPaper)
             .filter(
                 AssessmentPaper.paper_type == exam_type,
                 AssessmentPaper.is_active == True,
             )
-            .order_by(func.rand())
-            .first()
+        )
+        paper = (
+            paper_query.order_by(AssessmentPaper.version_no.asc(), AssessmentPaper.id.asc()).first()
+            if completed_count == 0
+            else paper_query.order_by(func.rand()).first()
         )
         if paper:
             return paper
