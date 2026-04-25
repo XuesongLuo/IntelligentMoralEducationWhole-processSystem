@@ -208,12 +208,13 @@ onBeforeUnmount(() => {
   min-height: calc(100vh - 64px);
   background: linear-gradient(180deg, #f4f7fb 0%, #edf3ff 100%);
   position: relative;
+  overflow-x: hidden;
 }
 
 .content {
-  width: 75vw;
-  max-width: calc(100% - 72px);
-  margin: 30px auto;
+  width: min(72vw, calc(100% - 40px));
+  max-width: 1380px;
+  margin: 20px auto;
   position: relative;
   z-index: 1200;
 }
@@ -351,7 +352,7 @@ h1 {
 
 @media (max-width: 720px) {
   .content {
-    width: calc(100% - 24px);
+    width: calc(100% - 20px);
     max-width: none;
   }
 

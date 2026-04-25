@@ -35,7 +35,7 @@
               <el-progress
                 type="dashboard"
                 :percentage="homeData.simulationCompletion || 0"
-                :width="170"
+                :width="164"
               />
             </div>
           </div>
@@ -51,7 +51,7 @@
               <div class="bar-wrap">
                 <el-progress
                   :percentage="item.progress"
-                  :stroke-width="18"
+                  :stroke-width="16"
                   :color="getProgressColor(item.progress)"
                 />
               </div>
@@ -193,7 +193,7 @@ async function loadData() {
       ...homeData.value,
       ...localData
     }
-    console.error('获取老师端首页数据失败：', error)
+    console.error('获取教师端首页数据失败：', error)
   }
 }
 
@@ -239,7 +239,7 @@ onMounted(async () => {
       teacherViewStore.persist()
     }
   } catch (error) {
-    console.error('获取老师侧边栏用户列表失败：', error)
+    console.error('获取教师侧边栏用户列表失败：', error)
     teacherViewStore.init(currentTeacher, [currentTeacher])
   }
 })
@@ -252,14 +252,15 @@ onMounted(async () => {
   background: #f5f7fa;
   min-height: calc(100vh - 64px);
   position: relative;
+  overflow-x: hidden;
 }
 
 .content {
-  width: 75vw;
-  max-width: calc(100% - 72px);
+  width: min(72vw, calc(100% - 40px));
+  max-width: 1380px;
   margin: 0 auto;
   transition: all 0.3s;
-  padding: 24px 20px;
+  padding: 18px 0;
   position: relative;
   z-index: 1200;
 }
@@ -267,14 +268,21 @@ onMounted(async () => {
 .overview-card,
 .nav-card {
   border-radius: 18px;
-  margin-bottom: 56px;
+  margin-bottom: 28px;
 }
 
 .overview-grid {
   display: grid;
-  grid-template-columns: 320px minmax(420px, 640px) 360px;
-  justify-content: space-between;
-  gap: 24px;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(320px, 1.25fr) minmax(260px, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.left-panel,
+.middle-panel,
+.right-panel,
+.bar-wrap {
+  min-width: 0;
 }
 
 .student-meta p {
@@ -288,7 +296,7 @@ onMounted(async () => {
 }
 
 .ai-time {
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   font-size: 16px;
 }
 
@@ -306,31 +314,34 @@ onMounted(async () => {
 .middle-panel h3,
 .right-panel h3 {
   margin-top: 0;
-  margin-bottom: 18px;
-  font-size: 28px;
+  margin-bottom: 16px;
+  font-size: 26px;
 }
 
 .progress-row {
   display: grid;
-  grid-template-columns: 140px 1fr 80px;
+  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .label {
   font-size: 15px;
+  overflow-wrap: anywhere;
 }
 
 .remain {
   font-size: 14px;
   color: #666;
+  white-space: nowrap;
 }
 
 .score-list {
   display: flex;
   gap: 16px;
   margin-bottom: 18px;
+  flex-wrap: wrap;
 }
 
 .score-row {
@@ -346,27 +357,28 @@ onMounted(async () => {
 }
 
 .nav-actions {
-  min-height: 240px;
+  min-height: 200px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   align-items: center;
   justify-items: center;
-  gap: 24px;
+  gap: 20px;
 }
 
 .nav-btn {
-  width: 170px;
-  height: 170px;
+  width: clamp(142px, 11vw, 168px);
+  height: clamp(142px, 11vw, 168px);
   border-radius: 50%;
   border: 2px solid #dcdfe6;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 28px;
+  font-size: clamp(22px, 1.4vw, 27px);
   cursor: pointer;
   transition: all 0.25s;
   background: #fff;
+  padding: 14px;
 }
 
 .nav-btn:hover {
@@ -392,15 +404,41 @@ onMounted(async () => {
   filter: brightness(0.88);
 }
 
+@media (max-width: 1440px) {
+  .overview-grid {
+    grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.15fr) minmax(240px, 0.95fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .left-panel {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 960px) {
   .content {
-    width: calc(100% - 24px);
+    width: calc(100% - 20px);
     max-width: none;
+    padding-top: 14px;
   }
 
   .overview-grid,
   .nav-actions {
     grid-template-columns: 1fr;
+  }
+
+  .progress-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .remain {
+    white-space: normal;
   }
 }
 </style>

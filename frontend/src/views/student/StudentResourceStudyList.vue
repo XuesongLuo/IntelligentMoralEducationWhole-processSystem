@@ -154,11 +154,13 @@ onBeforeUnmount(() => {
 .resource-page {
   min-height: calc(100vh - 64px);
   background: linear-gradient(180deg, #f4f7fb 0%, #edf3ff 100%);
+  overflow-x: hidden;
 }
-
+  
 .resource-content {
-  width: min(1220px, calc(100% - 48px));
-  margin: 30px auto;
+  width: min(72vw, calc(100% - 32px));
+  max-width: 1280px;
+  margin: 20px auto;
 }
 
 h1 {

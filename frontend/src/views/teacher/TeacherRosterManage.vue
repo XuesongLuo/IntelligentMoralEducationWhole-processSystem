@@ -258,10 +258,14 @@ onMounted(() => {
   background: #f5f7fa;
 }
 
+.teacher-page {
+  min-height: calc(100vh - 64px);
+}
+
 .main-box {
-  width: 75vw;
-  max-width: calc(100% - 72px);
-  margin: 30px auto;
+  width: min(72vw, calc(100% - 40px));
+  max-width: 1380px;
+  margin: 20px auto;
 }
 
 h1 {
@@ -293,7 +297,7 @@ h1 {
 
 @media (max-width: 960px) {
   .main-box {
-    width: calc(100% - 24px);
+    width: calc(100% - 20px);
     max-width: none;
   }
 }

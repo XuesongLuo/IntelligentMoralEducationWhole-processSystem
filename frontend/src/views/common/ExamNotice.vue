@@ -100,18 +100,19 @@ onMounted(() => {
 
 <style scoped>
 .page-wrap {
-  min-height: 100vh;
+  min-height: calc(100vh - 64px);
   background: #f5f7fa;
+  overflow-x: hidden;
 }
 .main-box {
-  width: 75vw;
-  max-width: calc(100% - 48px);
-  margin: 30px auto;
+  width: min(72vw, calc(100% - 32px));
+  max-width: 1380px;
+  margin: 20px auto;
 }
 
 @media (max-width: 960px) {
   .main-box {
-    width: calc(100% - 24px);
+    width: calc(100% - 20px);
     max-width: none;
   }
 }

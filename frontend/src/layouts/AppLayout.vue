@@ -147,5 +147,11 @@ onMounted(() => {
 .app-layout {
   min-height: 100vh;
   background: #f5f7fa;
+  overflow-x: hidden;
+}
+
+.app-main {
+  min-height: calc(100vh - 64px);
+  overflow-x: hidden;
 }
 </style>

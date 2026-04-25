@@ -22,7 +22,7 @@
               <el-progress
                 type="dashboard"
                 :percentage="homeData.simulationCompletion || 0"
-                :width="170"
+                :width="164"
               />
             </div>
           </div>
@@ -38,7 +38,7 @@
               <div class="bar-wrap">
                 <el-progress
                   :percentage="item.progress"
-                  :stroke-width="18"
+                  :stroke-width="16"
                   :color="getProgressColor(item.progress)"
                 />
               </div>
@@ -60,17 +60,6 @@
             </div>
 
             <ScoreRadarChart :score-dimensions="homeData.scoreDimensions" />
-
-            <!--div class="radar-fake">
-              <div class="radar-item" v-for="dim in homeData.scoreDimensions" :key="dim.key">
-                <div class="dim-name">{{ dim.name }}</div>
-                <div class="dim-bar">
-                  <div class="best" :style="{ width: dim.best + '%' }"></div>
-                  <div class="worst" :style="{ width: dim.worst + '%' }"></div>
-                </div>
-                <div class="dim-text">{{ dim.best }}/{{ dim.worst }}</div>
-              </div>
-            </div-->
           </div>
         </div>
       </el-card>
@@ -107,8 +96,8 @@ const homeData = ref({
   studentName: '',
   phone: '',
 
-  levelValue: 3, // 等级值，先写死，后续后端返回
-  aiUsageDuration: 120, // AI使用时长，单位可自定
+  levelValue: 3,
+  aiUsageDuration: 120,
   highestScore: 88,
   lowestScore: 72,
 
@@ -171,7 +160,7 @@ function loadLoginUser() {
   const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
 
   homeData.value.studentId = localUser.student_no || ''
-  homeData.value.studentName = localUser.real_name  || ''
+  homeData.value.studentName = localUser.real_name || ''
   homeData.value.phone = localUser.phone || ''
 }
 
@@ -179,160 +168,181 @@ onMounted(() => {
   loadLoginUser()
   loadData()
 })
-
 </script>
 
 <style scoped>
 .student-page {
   display: flex;
-  justify-content: center; /* 居中内容 */
+  justify-content: center;
   background: #f5f7fa;
   min-height: calc(100vh - 64px);
-} 
-.content {
-  width: 75vw;
-  max-width: calc(100% - 48px);
-  margin: 0 auto;
-  padding-top: 24px;
+  overflow-x: hidden;
 }
+
+.content {
+  width: min(72vw, calc(100% - 32px));
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 18px 0;
+}
+
 .overview-card,
 .nav-card {
   border-radius: 18px;
-  margin-bottom: 56px;
+  margin-bottom: 28px;
 }
+
 .overview-grid {
   display: grid;
-  grid-template-columns: 320px minmax(420px, 640px) 360px;
-  justify-content: space-between;
-  gap: 24px;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(320px, 1.25fr) minmax(260px, 1fr);
+  align-items: start;
+  gap: 20px;
 }
+
+.left-panel,
+.middle-panel,
+.right-panel,
+.bar-wrap {
+  min-width: 0;
+}
+
 .student-meta p {
   margin: 6px 0;
   font-size: 18px;
 }
+
 .level-box {
   margin: 4px 0;
   min-height: 36px;
 }
+
 .ai-time {
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   font-size: 16px;
 }
+
 .completion {
   display: flex;
   flex-direction: column;
   align-items: center;
 }
+
 .completion-label {
   margin-bottom: 12px;
   font-size: 16px;
 }
+
 .middle-panel h3,
 .right-panel h3 {
   margin-top: 0;
-  margin-bottom: 18px;
-  font-size: 28px;
+  margin-bottom: 16px;
+  font-size: 26px;
 }
+
 .progress-row {
   display: grid;
-  grid-template-columns: 140px 1fr 80px;
+  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
+
 .label {
   font-size: 15px;
+  overflow-wrap: anywhere;
 }
+
 .remain {
   font-size: 14px;
   color: #666;
+  white-space: nowrap;
 }
+
 .score-list {
   display: flex;
   gap: 16px;
   margin-bottom: 18px;
+  flex-wrap: wrap;
 }
+
 .score-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .score-dot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
 }
-.radar-fake {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.radar-item {
-  display: grid;
-  grid-template-columns: 90px 1fr 70px;
-  gap: 10px;
-  align-items: center;
-}
-.dim-bar {
-  position: relative;
-  height: 12px;
-  background: #ebeef5;
-  border-radius: 999px;
-  overflow: hidden;
-}
-.dim-bar .best {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 12px;
-  background: #409eff;
-  opacity: 0.9;
-}
-.dim-bar .worst {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 12px;
-  background: #e6a23c;
-  opacity: 0.7;
-}
+
 .nav-actions {
-  min-height: 240px;
+  min-height: 200px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   align-items: center;
   justify-items: center;
-  gap: 24px;
+  gap: 20px;
 }
+
 .nav-btn {
-  width: 180px;
-  height: 180px;
+  width: clamp(142px, 11vw, 170px);
+  height: clamp(142px, 11vw, 170px);
   border-radius: 50%;
   border: 2px solid #dcdfe6;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  font-size: 30px;
+  font-size: clamp(22px, 1.45vw, 28px);
   cursor: pointer;
   transition: all 0.25s;
   background: #fff;
+  padding: 14px;
 }
+
 .nav-btn:hover {
   transform: translateY(-4px);
   border-color: #409eff;
   color: #409eff;
 }
 
+@media (max-width: 1440px) {
+  .overview-grid {
+    grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.15fr) minmax(240px, 0.95fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .left-panel {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 960px) {
   .content {
-    width: calc(100% - 24px);
+    width: calc(100% - 20px);
     max-width: none;
+    padding-top: 14px;
   }
 
   .overview-grid,
   .nav-actions {
     grid-template-columns: 1fr;
+  }
+
+  .progress-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .remain {
+    white-space: normal;
   }
 }
 </style>

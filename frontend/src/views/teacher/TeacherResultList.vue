@@ -469,15 +469,16 @@ onMounted(async () => {
 
 <style scoped>
 .teacher-page {
-  min-height: 100vh;
+  min-height: calc(100vh - 64px);
   background: #f5f7fa;
   position: relative;
+  overflow-x: hidden;
 }
 
 .main-box {
-  width: 75vw;
-  max-width: calc(100% - 72px);
-  margin: 30px auto;
+  width: min(72vw, calc(100% - 40px));
+  max-width: 1380px;
+  margin: 20px auto;
 }
 
 h1 {
@@ -578,7 +579,7 @@ h1 {
 
 @media (max-width: 960px) {
   .main-box {
-    width: calc(100% - 24px);
+    width: calc(100% - 20px);
     max-width: none;
   }
 }
