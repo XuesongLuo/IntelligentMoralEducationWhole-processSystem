@@ -19,7 +19,7 @@
           <p>用户编号：{{ detail.studentNo }}</p>
           <p>姓名：{{ detail.realName }}</p>
           <p>提交时间：{{ detail.submitTime }}</p>
-          <p>答题时间：{{ detail.durationMinutes }} min</p>
+          <p>答题时长：{{ detail.durationMinutes }} min</p>
         </el-card>
       </div>
 
@@ -116,35 +116,65 @@ function closeDialog() {
   emit('update:modelValue', false)
 }
 
+function joinAnswerParts(parts, separator = '；') {
+  return parts
+    .map(part => String(part ?? '').trim())
+    .filter(Boolean)
+    .join(separator)
+}
+
+function formatExtraValue(extraValue) {
+  if (Array.isArray(extraValue)) {
+    return joinAnswerParts(extraValue.map(item => formatAnswer(item)), '；')
+  }
+  if (extraValue && typeof extraValue === 'object') {
+    return formatAnswer(extraValue)
+  }
+  return String(extraValue ?? '').trim()
+}
+
 function formatAnswer(answer) {
-  if (Array.isArray(answer)) return answer.join('、')
   if (answer === true) return '正确'
   if (answer === false) return '错误'
   if (answer === null || answer === undefined || answer === '') return '-'
+
+  if (Array.isArray(answer)) {
+    const parts = answer
+      .map(item => formatAnswer(item))
+      .filter(item => item && item !== '-')
+    return parts.length ? joinAnswerParts(parts, '；') : '-'
+  }
+
   if (typeof answer === 'object') {
     const selected = Array.isArray(answer.selected)
       ? answer.selected
-      : answer.selected
+      : answer.selected !== undefined && answer.selected !== null && answer.selected !== ''
         ? [answer.selected]
         : []
     const extras = answer.extras && typeof answer.extras === 'object' ? answer.extras : {}
 
     if (selected.length) {
-      return selected
-        .map(item => {
-          const extraValue = extras[item]
-          if (Array.isArray(extraValue) && extraValue.length) {
-            return `${item}（补充：${extraValue.filter(Boolean).join('、')}）`
-          }
-          if (typeof extraValue === 'string' && extraValue.trim()) {
-            return `${item}（补充：${extraValue.trim()}）`
-          }
-          return item
-        })
-        .join('；')
+      return joinAnswerParts(
+        selected.map(item => {
+          const baseText = formatAnswer(item)
+          const extraText = formatExtraValue(extras[item])
+          return extraText ? `${baseText}（补充：${extraText}）` : baseText
+        }),
+        '；'
+      )
     }
-    return JSON.stringify(answer)
+
+    const objectParts = Object.entries(answer)
+      .map(([key, value]) => {
+        if (key === 'extras') return ''
+        const valueText = formatAnswer(value)
+        return valueText && valueText !== '-' ? `${key}：${valueText}` : ''
+      })
+      .filter(Boolean)
+
+    return objectParts.length ? joinAnswerParts(objectParts, '；') : JSON.stringify(answer)
   }
+
   return String(answer)
 }
 
