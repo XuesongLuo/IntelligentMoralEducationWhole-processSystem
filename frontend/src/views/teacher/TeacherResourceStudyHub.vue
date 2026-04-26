@@ -9,15 +9,12 @@
     />
     <div v-if="!sidebarCollapsed" class="page-mask" @click="toggleSidebar" />
 
-    <div class="content" :class="{ expand: sidebarCollapsed, dimmed: !sidebarCollapsed }">
+    <div class="content" :class="{ dimmed: !sidebarCollapsed }">
       <h1>德育资源学习</h1>
 
       <el-card class="hub-card" shadow="never">
-        <div class="back-row">
+        <div class="toolbar-row">
           <el-button @click="goBack">上一级</el-button>
-        </div>
-
-        <div class="page-header">
           <p>当前查看对象：{{ selectedUserLabel }}</p>
         </div>
 
@@ -219,13 +216,13 @@ onBeforeUnmount(() => {
 .content {
   width: min(72vw, calc(100% - 40px));
   max-width: 1380px;
-  margin: 20px auto;
+  margin: 12px auto;
   position: relative;
   z-index: 1200;
 }
 
 h1 {
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   text-align: center;
   font-size: 52px;
   color: #16335b;
@@ -236,29 +233,33 @@ h1 {
   border: none;
 }
 
-.back-row {
-  margin-bottom: 30px;
+:deep(.hub-card .el-card__body) {
+  padding: 20px 24px 18px;
 }
 
-.page-header {
-  margin-bottom: 28px;
-  text-align: center;
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
 }
 
-.page-header p {
+.toolbar-row p {
   margin: 0;
   color: #5a6a85;
   font-size: 16px;
+  text-align: right;
 }
 
 .hub-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 28px 22px;
+  gap: 18px 16px;
 }
 
 .hub-item {
-  padding: 16px 12px 8px;
+  padding: 8px 8px 6px;
   border-radius: 22px;
   transition: transform 0.22s ease, box-shadow 0.22s ease;
   cursor: pointer;
@@ -272,7 +273,7 @@ h1 {
 .circle-button {
   width: 220px;
   height: 220px;
-  margin: 0 auto 18px;
+  margin: 0 auto 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -287,12 +288,12 @@ h1 {
 }
 
 .category-name {
-  min-height: 56px;
-  margin: 0 auto 16px;
+  min-height: 44px;
+  margin: 0 auto 10px;
   width: 86%;
   text-align: center;
-  font-size: 28px;
-  line-height: 1.35;
+  font-size: 24px;
+  line-height: 1.3;
   font-weight: 600;
   color: #1b3f73;
 }
@@ -335,9 +336,9 @@ h1 {
 }
 
 .progress-text {
-  margin-top: 10px;
+  margin-top: 8px;
   text-align: center;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #20426e;
 }
@@ -372,6 +373,15 @@ h1 {
 
   .hub-grid {
     grid-template-columns: 1fr;
+  }
+
+  .toolbar-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toolbar-row p {
+    text-align: left;
   }
 
   .category-name {
