@@ -182,19 +182,16 @@ h1 {
   width: 220px;
   height: 220px;
   margin: 0 auto 18px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.18) 30%, transparent 32%), linear-gradient(145deg, #2e6bba, #57a5ff);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 2px 12px rgba(255, 255, 255, 0.16), 0 18px 28px rgba(46, 107, 186, 0.28);
   overflow: hidden;
 }
 
 .category-icon {
-  width: 78%;
-  height: 78%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
 }
 
