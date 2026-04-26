@@ -5,7 +5,8 @@
     <el-form class="auth-form" @submit.prevent="handleSubmit">
       <AuthInput
         v-model="form.username"
-        icon="◉"
+        :icon-image="studentNoIcon"
+        icon-alt="学号工号"
         placeholder="学号/工号"
         :status="status.username"
         :error-message="errors.username"
@@ -14,7 +15,8 @@
 
       <AuthInput
         v-model="form.realName"
-        icon="👤"
+        :icon-image="realNameIcon"
+        icon-alt="真实姓名"
         placeholder="真实姓名"
         :status="status.realName"
         :error-message="errors.realName"
@@ -23,7 +25,8 @@
 
       <AuthInput
         v-model="form.newPassword"
-        icon="🔐"
+        :icon-image="passwordIcon"
+        icon-alt="新密码"
         type="password"
         placeholder="请输入新密码"
         :status="status.newPassword"
@@ -33,7 +36,8 @@
 
       <AuthInput
         v-model="form.confirmPassword"
-        icon="🔐"
+        :icon-image="confirmPasswordIcon"
+        icon-alt="重复密码"
         type="password"
         placeholder="再次输入密码"
         :status="status.confirmPassword"
@@ -51,10 +55,7 @@
           提交
         </el-button>
 
-        <el-button
-          class="auth-custom-btn back-btn"
-          @click="router.push('/login')"
-        >
+        <el-button class="auth-custom-btn back-btn" @click="router.push('/login')">
           返回
         </el-button>
       </div>
@@ -69,6 +70,10 @@ import AuthLayout from '@/components/auth/AuthLayout.vue'
 import AuthInput from '@/components/auth/AuthInput.vue'
 import { forgotPasswordApi } from '@/api/auth'
 import { isPassword, isRealName, isStudentOrWorkNo } from '@/utils/validators'
+import studentNoIcon from '@/assets/images/auth/学号-copy.svg'
+import realNameIcon from '@/assets/images/auth/变更姓名.svg'
+import passwordIcon from '@/assets/images/auth/密码.svg'
+import confirmPasswordIcon from '@/assets/images/auth/重复密码.svg'
 
 const router = useRouter()
 const loading = ref(false)
@@ -119,7 +124,7 @@ function validateField(field) {
     if (!form.newPassword) {
       errors.newPassword = '请输入新密码'
     } else if (!isPassword(form.newPassword)) {
-      errors.newPassword = '密码长度需为6-10位'
+      errors.newPassword = '密码长度需为 6-10 位'
     }
 
     if (form.confirmPassword) {

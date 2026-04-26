@@ -1,8 +1,20 @@
 <template>
   <div class="custom-input-wrapper">
     <div class="input-row">
-      <div class="input-icon-box">{{ icon }}</div>
-      
+      <div class="input-icon-box">
+        <slot name="icon">
+          <div class="input-icon-inner">
+            <img
+              v-if="iconImage"
+              :src="iconImage"
+              :alt="iconAlt || placeholder || 'input icon'"
+              class="input-icon-image"
+            />
+            <span v-else class="input-icon-text">{{ icon }}</span>
+          </div>
+        </slot>
+      </div>
+
       <div class="input-main">
         <el-input
           :type="type"
@@ -19,7 +31,7 @@
             <slot name="suffix" />
           </template>
         </el-input>
-        
+
         <div class="error-msg" v-if="errorMessage">{{ errorMessage }}</div>
       </div>
 
@@ -32,12 +44,13 @@
 </template>
 
 <script setup>
-/* 必须保留原有的 Props 定义，否则父组件传入的参数会失效 */
 defineProps({
   modelValue: String,
   placeholder: String,
   type: { type: String, default: 'text' },
   icon: String,
+  iconImage: String,
+  iconAlt: String,
   status: String,
   errorMessage: String,
   actionText: String
@@ -53,25 +66,48 @@ defineEmits(['update:modelValue', 'action', 'blur'])
 
 .input-row {
   display: flex;
-  align-items: center; /* 垂直居中 */
+  align-items: center;
 }
 
 .input-icon-box {
-  width: 50px; /* 固定宽度，确保所有行对齐 */
-  font-size: 24px;
-  color: #333;
+  width: 50px;
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
+.input-icon-inner {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-icon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.input-icon-text {
+  font-size: 24px;
+  line-height: 1;
+  color: #333;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .input-main {
-  flex: 1; /* 自动撑满中间剩余空间 */
+  flex: 1;
   position: relative;
 }
 
 .status-box {
-  width: 50px; /* 为右侧勾选预留固定空间 */
+  width: 50px;
   display: flex;
   justify-content: center;
   margin-left: 10px;
@@ -86,7 +122,6 @@ defineEmits(['update:modelValue', 'action', 'blur'])
   padding: 0 20px;
 }
 
-/* 错误时的边框颜色 */
 :deep(.styled-el-input.is-error .el-input__wrapper) {
   border-color: #f56c6c !important;
 }
