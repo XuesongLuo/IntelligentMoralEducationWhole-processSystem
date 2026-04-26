@@ -1,18 +1,13 @@
 <template>
   <div class="auth-container">
-    <img class="auth-logo" src="@/assets/images/logo.png" alt="logo" />
+    <img class="auth-logo" :src="authLogo" alt="IMEWS logo" />
 
     <div class="auth-section left-section">
       <div class="banner-box">
-        <el-carousel
-          trigger="click"
-          arrow="never"
-          height="100%"
-          :interval="5000"
-        >
+        <el-carousel trigger="click" arrow="never" height="100%" :interval="5000">
           <el-carousel-item v-for="(item, index) in bannerItems" :key="index">
             <div class="carousel-img-container">
-              <img :src="item.src" class="shrinked-banner-img" :alt="item.alt || `banner-${index}`" />
+              <img :src="item.src" class="banner-img" :alt="item.alt" />
             </div>
           </el-carousel-item>
         </el-carousel>
@@ -21,15 +16,7 @@
 
     <div class="auth-section right-section">
       <div class="form-content-wrapper">
-        <slot>
-          <div class="default-form">
-            <h3>登录表单插槽</h3>
-            <p>屏幕变窄时，这里的宽度会随布局自动收紧。</p>
-            <el-input placeholder="请输入账号" style="margin-bottom: 15px;" />
-            <el-input placeholder="请输入密码" type="password" style="margin-bottom: 15px;" />
-            <el-button type="primary" class="default-btn">登录</el-button>
-          </div>
-        </slot>
+        <slot />
       </div>
     </div>
   </div>
@@ -37,11 +24,15 @@
 
 <script setup>
 import { ref } from 'vue'
+import authLogo from '@/assets/images/auth/logo/dyq_icon_128_64.png'
+import bannerOne from '@/assets/images/auth/banners/carousel_1.png'
+import bannerTwo from '@/assets/images/auth/banners/carousel_2.png'
+import bannerThree from '@/assets/images/auth/banners/carousel_3.png'
 
 const bannerItems = ref([
-  { src: 'https://via.placeholder.com/600x400/8aba35/ffffff?text=Illustration+1', alt: 'Image 1' },
-  { src: 'https://via.placeholder.com/600x400/8aba35/ffffff?text=Illustration+2', alt: 'Image 2' },
-  { src: 'https://via.placeholder.com/600x400/8aba35/ffffff?text=Illustration+3', alt: 'Image 3' }
+  { src: bannerOne, alt: '认证页轮播图 1' },
+  { src: bannerTwo, alt: '认证页轮播图 2' },
+  { src: bannerThree, alt: '认证页轮播图 3' }
 ])
 </script>
 
@@ -106,18 +97,6 @@ const bannerItems = ref([
   transition: all 0.3s ease;
 }
 
-.default-form {
-  padding: 20px;
-  background: #fafafa;
-  border: 1px dashed #ccc;
-}
-
-.default-btn {
-  width: 100%;
-  background-color: #8aba35;
-  border-color: #8aba35;
-}
-
 :deep(.el-carousel) {
   height: 100%;
   width: 100%;
@@ -135,16 +114,13 @@ const bannerItems = ref([
 .carousel-img-container {
   width: 100%;
   height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 10%;
 }
 
-.shrinked-banner-img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+.banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 :deep(.el-carousel__indicators) {
