@@ -5,7 +5,8 @@
     <form class="auth-form" @submit.prevent="handleRegister">
       <AuthInput
         v-model="currentNo"
-        icon="◉"
+        :icon-image="studentNoIcon"
+        icon-alt="学号工号"
         :placeholder="form.role === 'student' ? '请输入学号' : '请输入工号'"
         :status="status.no"
         :error-message="errors.no"
@@ -14,9 +15,10 @@
 
       <AuthInput
         v-model="form.password"
-        icon="🔐"
+        :icon-image="passwordIcon"
+        icon-alt="密码"
         type="password"
-        placeholder="设置6-10位登录密码"
+        placeholder="设置 6-10 位登录密码"
         :status="status.password"
         :error-message="errors.password"
         @blur="validateField('password')"
@@ -24,7 +26,8 @@
 
       <AuthInput
         v-model="form.confirmPassword"
-        icon="🔐"
+        :icon-image="confirmPasswordIcon"
+        icon-alt="重复密码"
         type="password"
         placeholder="再次输入密码"
         :status="status.confirmPassword"
@@ -34,7 +37,8 @@
 
       <AuthInput
         v-model="form.real_name"
-        icon="👤"
+        :icon-image="realNameIcon"
+        icon-alt="真实姓名"
         placeholder="姓名验证，请务必输入真实姓名"
         :status="status.real_name"
         :error-message="errors.real_name"
@@ -43,7 +47,8 @@
 
       <AuthInput
         v-model="form.phone"
-        icon="📫"
+        :icon-image="phoneIcon"
+        icon-alt="手机号"
         placeholder="输入手机号"
         :status="status.phone"
         :error-message="errors.phone"
@@ -52,7 +57,8 @@
 
       <AuthInput
         v-model="form.smsCode"
-        icon="✔"
+        :icon-image="smsCodeIcon"
+        icon-alt="手机验证码"
         placeholder="输入手机验证码"
         :action-text="smsActionText"
         :status="status.smsCode"
@@ -62,14 +68,19 @@
       />
 
       <div class="role-selection-bar">
-        <div class="role-label-group">
-          <span class="role-main-label">账号类型</span>
-          <span class="role-sub-label">{{ form.role === 'teacher' ? '老师' : '学生' }}</span>
+        <div class="role-icon-box">
+          <img :src="roleTypeIcon" alt="账号类型" class="role-icon-image" />
         </div>
-        <div class="role-switch-container">
-          <span :class="['role-text', { active: form.role === 'student' }]">学生</span>
-          <AuthSwitch v-model="form.role" />
-          <span :class="['role-text', { active: form.role === 'teacher' }]">老师</span>
+        <div class="role-selection-main">
+          <div class="role-label-group">
+            <span class="role-main-label">账号类型</span>
+            <span class="role-sub-label">{{ form.role === 'teacher' ? '老师' : '学生' }}</span>
+          </div>
+          <div class="role-switch-container">
+            <span :class="['role-text', { active: form.role === 'student' }]">学生</span>
+            <AuthSwitch v-model="form.role" />
+            <span :class="['role-text', { active: form.role === 'teacher' }]">老师</span>
+          </div>
         </div>
       </div>
 
@@ -78,7 +89,7 @@
           <div class="dynamic-input-wrapper">
             <AuthInput
               v-model="form.invite_code"
-              icon="🎓"
+              icon="邀请码"
               placeholder="请输入教师专属邀请码（必填）"
               :status="status.invite_code"
               :error-message="errors.invite_code"
@@ -90,17 +101,15 @@
 
       <div class="agreement-row">
         <el-checkbox v-model="form.agree" class="custom-checkbox">
-          <span class="agreement-text">勾选并同意 <a href="javascript:;" class="auth-link-inline">服务条款</a></span>
+          <span class="agreement-text">
+            勾选并同意 <a href="javascript:;" class="auth-link-inline">服务条款</a>
+          </span>
         </el-checkbox>
 
         <router-link to="/login" class="auth-link">已有账号?</router-link>
       </div>
 
-      <el-button
-        class="action-btn btn-green"
-        native-type="submit"
-        :loading="loading"
-      >
+      <el-button class="action-btn btn-green" native-type="submit" :loading="loading">
         {{ loading ? '提交中...' : '注册并登录' }}
       </el-button>
     </form>
@@ -122,6 +131,13 @@ import {
   isStudentNo,
   isTeacherNo
 } from '@/utils/validators'
+import studentNoIcon from '@/assets/images/auth/学号-copy.svg'
+import passwordIcon from '@/assets/images/auth/密码.svg'
+import confirmPasswordIcon from '@/assets/images/auth/重复密码.svg'
+import realNameIcon from '@/assets/images/auth/变更姓名.svg'
+import phoneIcon from '@/assets/images/auth/手机号.svg'
+import smsCodeIcon from '@/assets/images/auth/手机验证码.svg'
+import roleTypeIcon from '@/assets/images/auth/角色类型.svg'
 
 const router = useRouter()
 const loading = ref(false)
@@ -194,17 +210,21 @@ function validate() {
   Object.keys(errors).forEach(key => {
     errors[key] = ''
   })
+
   validateField('no')
   validateField('password')
   validateField('confirmPassword')
   validateField('real_name')
   validateField('phone')
   validateField('smsCode')
+
   if (form.role === 'teacher') validateField('invite_code')
+
   if (!form.agree) {
     alert('请先勾选服务条款')
     return false
   }
+
   return Object.values(errors).every(item => !item)
 }
 
@@ -225,7 +245,7 @@ function validateField(field) {
     if (!form.password) {
       errors.password = '请输入密码'
     } else if (!/^.{6,10}$/.test(form.password)) {
-      errors.password = '密码长度需为6-10位'
+      errors.password = '密码长度需为 6-10 位'
     }
 
     if (form.confirmPassword) {
@@ -310,11 +330,13 @@ async function handleSendCode() {
     sendingCode.value = true
     const res = await sendSmsCodeApi({ phone: form.phone })
     const bizData = res?.data || {}
+
     if (bizData?.debug_code) {
       alert(`验证码发送成功（开发模式）：${bizData.debug_code}`)
     } else {
       alert('验证码发送成功，请注意查收短信')
     }
+
     startCountdown(60)
   } catch (error) {
     alert(error?.response?.data?.detail || error?.response?.data?.message || '验证码发送失败')
@@ -328,6 +350,7 @@ async function handleRegister() {
 
   try {
     loading.value = true
+
     const payload =
       form.role === 'teacher'
         ? {
@@ -409,11 +432,32 @@ onBeforeUnmount(() => {
 
 .role-selection-bar {
   display: flex;
+  align-items: center;
+  margin: 0 60px 25px 0;
+}
+
+.role-icon-box {
+  width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.role-icon-image {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+}
+
+.role-selection-main {
+  flex: 1;
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 64px;
+  min-height: 64px;
   padding: 0 25px;
-  margin: 0 60px 25px 50px;
   background: #fcfcfc;
   border: 1px solid #b3b3b3;
   border-radius: 4px;
@@ -541,7 +585,7 @@ onBeforeUnmount(() => {
     margin-bottom: 25px;
   }
 
-  .role-selection-bar {
+  .role-selection-main {
     padding: 0 10px;
   }
 
@@ -562,7 +606,7 @@ onBeforeUnmount(() => {
     margin-bottom: 20px;
   }
 
-  .role-selection-bar {
+  .role-selection-main {
     padding: 0 8px;
   }
 }
