@@ -2,7 +2,7 @@
   <div class="app-layout">
     <AppHeader
       :username="headerDisplayText"
-      :logo="userInfo.logo"
+      :logo="headerLogo"
       :system-name="systemName"
       :logout-disabled="logoutDisabled"
       :home-disabled="homeDisabled"
@@ -26,6 +26,7 @@
 import { computed, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '@/components/common/AppHeader.vue'
+import defaultHeaderLogo from '@/assets/images/dyq_icon_64_64.png'
 import {
   EXAM_BLOCKED_MESSAGE,
   EXAM_LOGOUT_BLOCKED_MESSAGE,
@@ -57,12 +58,16 @@ const headerDisplayText = computed(() => {
   return userInfo.student_no || userInfo.real_name || '学号'
 })
 
+const headerLogo = computed(() => {
+  return userInfo.logo || defaultHeaderLogo
+})
+
 const hasActiveExam = computed(() => {
   const activeExamSession = getActiveExamSession()
   return Boolean(
     activeExamSession &&
-    activeExamSession.userId === userInfo.id &&
-    activeExamSession.role === userInfo.role
+      activeExamSession.userId === userInfo.id &&
+      activeExamSession.role === userInfo.role
   )
 })
 
