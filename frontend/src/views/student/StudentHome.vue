@@ -84,9 +84,9 @@ import { getUserHomeData } from '@/api/user'
 import { parseLevel } from '@/utils/level'
 import LevelBadge from '@/components/common/LevelBadge.vue'
 import ScoreRadarChart from '@/components/common/ScoreRadarChart.vue'
-import moralExamButton from '@/assets/images/button_德育画像构建与考试_174_174.png'
-import resultButton from '@/assets/images/button_结果查看_174_174.png'
-import resourceStudyButton from '@/assets/images/button_德育资源学习_174_174.png'
+import moralExamButton from '@/assets/images/home-navigation/moral-exam.png'
+import resultButton from '@/assets/images/home-navigation/results.png'
+import resourceStudyButton from '@/assets/images/home-navigation/resource-study.png'
 
 const router = useRouter()
 
