@@ -8,12 +8,8 @@
           <el-button @click="goBack">上一级</el-button>
         </div>
 
-        <div class="category-hero">
-          <div class="category-hero-icon" v-if="categoryIcon">
-            <img :src="categoryIcon" :alt="categoryName" />
-          </div>
-          <div class="category-hero-text">
-            <h2>{{ categoryName || '德育资源学习' }}</h2>
+        <div class="header-row">
+          <div>
             <p>点击跳转即可进入外部学习资源，点击过即视为完成。</p>
           </div>
           <div class="summary-chip">
@@ -56,11 +52,11 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getResourceItems, submitResourceHeartbeat, visitResource } from '@/api/resource'
-import { getResourceCategoryFavicon, getResourceCategoryIcon } from '@/utils/resourceCategoryIcons'
+import { getResourceCategoryFavicon } from '@/utils/resourceCategoryIcons'
 import { APP_NAME, setDocumentMeta } from '@/utils/documentMeta'
 
 const route = useRoute()
@@ -73,7 +69,6 @@ const pageSize = ref(10)
 const records = ref([])
 let heartbeatTimer = null
 
-const categoryIcon = computed(() => getResourceCategoryIcon(categoryName.value))
 const categoryId = () => Number(route.params.categoryId)
 
 function goBack() {
@@ -186,41 +181,15 @@ h1 {
   margin-bottom: 30px;
 }
 
-.category-hero {
+.header-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
-.category-hero-icon {
-  width: 108px;
-  height: 108px;
-  border-radius: 24px;
-  background: linear-gradient(145deg, #2e6bba, #57a5ff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 14px 24px rgba(46, 107, 186, 0.2);
-  overflow: hidden;
-}
-
-.category-hero-icon img {
-  width: 82%;
-  height: 82%;
-  object-fit: contain;
-  display: block;
-}
-
-.category-hero-text h2 {
-  margin: 0 0 6px;
-  font-size: 32px;
-  line-height: 1.25;
-  color: #16335b;
-}
-
-.category-hero-text p {
+.header-row p {
   margin: 0;
   color: #5a6a85;
 }
@@ -255,13 +224,13 @@ h1 {
     font-size: 40px;
   }
 
-  .category-hero {
-    grid-template-columns: 1fr;
-    justify-items: flex-start;
-  }
-
   .summary-chip {
     min-width: 0;
+  }
+
+  .header-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
   }
 }
 </style>

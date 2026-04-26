@@ -17,12 +17,8 @@
           <el-button @click="goBack">上一级</el-button>
         </div>
 
-        <div class="category-hero">
-          <div class="category-hero-icon" v-if="categoryIcon">
-            <img :src="categoryIcon" :alt="categoryName" />
-          </div>
-          <div class="category-hero-text">
-            <h2>{{ categoryName || '德育资源学习' }}</h2>
+        <div class="header-row">
+          <div>
             <p>当前查看对象：{{ selectedUserLabel }}</p>
           </div>
           <div class="actions-row">
@@ -113,7 +109,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { storeToRefs } from 'pinia'
@@ -129,7 +125,7 @@ import {
   updateResourceVisibility,
   visitResource
 } from '@/api/resource'
-import { getResourceCategoryFavicon, getResourceCategoryIcon } from '@/utils/resourceCategoryIcons'
+import { getResourceCategoryFavicon } from '@/utils/resourceCategoryIcons'
 import { APP_NAME, setDocumentMeta } from '@/utils/documentMeta'
 
 const route = useRoute()
@@ -151,7 +147,6 @@ const form = reactive({
 let heartbeatTimer = null
 
 const categoryId = computed(() => Number(route.params.categoryId))
-const categoryIcon = computed(() => getResourceCategoryIcon(categoryName.value))
 const selectedUserLabel = computed(() => {
   const user = selectedUser.value
   if (!user) return '未选择用户'
@@ -427,41 +422,15 @@ h1 {
   margin-bottom: 30px;
 }
 
-.category-hero {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+.header-row {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
-.category-hero-icon {
-  width: 108px;
-  height: 108px;
-  border-radius: 24px;
-  background: linear-gradient(145deg, #2e6bba, #57a5ff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 14px 24px rgba(46, 107, 186, 0.2);
-  overflow: hidden;
-}
-
-.category-hero-icon img {
-  width: 82%;
-  height: 82%;
-  object-fit: contain;
-  display: block;
-}
-
-.category-hero-text h2 {
-  margin: 0 0 6px;
-  font-size: 32px;
-  line-height: 1.25;
-  color: #16335b;
-}
-
-.category-hero-text p {
+.header-row p {
   margin: 0;
   color: #5a6a85;
 }
@@ -527,14 +496,14 @@ h1 {
     font-size: 40px;
   }
 
-  .category-hero {
-    grid-template-columns: 1fr;
-    align-items: flex-start;
-  }
-
   .actions-row {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .header-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>
