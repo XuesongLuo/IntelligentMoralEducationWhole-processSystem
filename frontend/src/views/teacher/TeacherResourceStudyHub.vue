@@ -7,11 +7,7 @@
       @toggle="toggleSidebar"
       @select-user="handleSelectUser"
     />
-    <div
-      v-if="!sidebarCollapsed"
-      class="page-mask"
-      @click="toggleSidebar"
-    />
+    <div v-if="!sidebarCollapsed" class="page-mask" @click="toggleSidebar" />
 
     <div class="content" :class="{ expand: sidebarCollapsed, dimmed: !sidebarCollapsed }">
       <h1>德育资源学习</h1>
@@ -33,8 +29,14 @@
             @click="goCategory(item)"
           >
             <div class="circle-button">
-              <span>{{ item.name }}</span>
+              <img
+                v-if="getCategoryIcon(item.name)"
+                :src="getCategoryIcon(item.name)"
+                :alt="item.name"
+                class="category-icon"
+              />
             </div>
+            <div class="category-name">{{ item.name }}</div>
             <div class="battery-wrap">
               <div class="battery">
                 <span
@@ -68,6 +70,7 @@ import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
 import { useTeacherViewStore } from '@/stores/teacherView'
 import { getTeacherStudentList } from '@/api/user'
 import { getResourceCategories, submitResourceHeartbeat } from '@/api/resource'
+import { getResourceCategoryIcon } from '@/utils/resourceCategoryIcons'
 
 const router = useRouter()
 const teacherViewStore = useTeacherViewStore()
@@ -88,6 +91,10 @@ function formatPercent(value) {
 
 function filledSegments(progress) {
   return Math.max(0, Math.min(10, Math.round((Number(progress) || 0) / 10)))
+}
+
+function getCategoryIcon(name) {
+  return getResourceCategoryIcon(name)
 }
 
 function toggleSidebar() {
@@ -153,9 +160,7 @@ watch(
   () => isViewingSelf.value,
   value => {
     stopHeartbeat()
-    if (value) {
-      startHeartbeat()
-    }
+    if (value) startHeartbeat()
   },
   { immediate: true }
 )
@@ -267,24 +272,32 @@ h1 {
 .circle-button {
   width: 220px;
   height: 220px;
-  margin: 0 auto 20px;
+  margin: 0 auto 18px;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.18) 30%, transparent 32%),
-    linear-gradient(145deg, #2e6bba, #57a5ff);
-  color: #fff;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.18) 30%, transparent 32%), linear-gradient(145deg, #2e6bba, #57a5ff);
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
   box-shadow: inset 0 2px 12px rgba(255, 255, 255, 0.16), 0 18px 28px rgba(46, 107, 186, 0.28);
+  overflow: hidden;
 }
 
-.circle-button span {
-  width: 70%;
+.category-icon {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  display: block;
+}
+
+.category-name {
+  min-height: 56px;
+  margin: 0 auto 16px;
+  width: 86%;
+  text-align: center;
   font-size: 28px;
-  line-height: 1.45;
+  line-height: 1.35;
   font-weight: 600;
+  color: #1b3f73;
 }
 
 .battery-wrap {
@@ -362,6 +375,10 @@ h1 {
 
   .hub-grid {
     grid-template-columns: 1fr;
+  }
+
+  .category-name {
+    font-size: 24px;
   }
 }
 </style>

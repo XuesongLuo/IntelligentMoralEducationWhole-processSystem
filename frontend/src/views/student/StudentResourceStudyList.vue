@@ -8,8 +8,12 @@
           <el-button @click="goBack">上一级</el-button>
         </div>
 
-        <div class="header-row">
-          <div>
+        <div class="category-hero">
+          <div class="category-hero-icon" v-if="categoryIcon">
+            <img :src="categoryIcon" :alt="categoryName" />
+          </div>
+          <div class="category-hero-text">
+            <h2>{{ categoryName || '德育资源学习' }}</h2>
             <p>点击跳转即可进入外部学习资源，点击过即视为完成。</p>
           </div>
           <div class="summary-chip">
@@ -52,14 +56,11 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import {
-  getResourceItems,
-  submitResourceHeartbeat,
-  visitResource
-} from '@/api/resource'
+import { getResourceItems, submitResourceHeartbeat, visitResource } from '@/api/resource'
+import { getResourceCategoryIcon } from '@/utils/resourceCategoryIcons'
 
 const route = useRoute()
 const router = useRouter()
@@ -71,6 +72,7 @@ const pageSize = ref(10)
 const records = ref([])
 let heartbeatTimer = null
 
+const categoryIcon = computed(() => getResourceCategoryIcon(categoryName.value))
 const categoryId = () => Number(route.params.categoryId)
 
 function goBack() {
@@ -156,7 +158,7 @@ onBeforeUnmount(() => {
   background: linear-gradient(180deg, #f4f7fb 0%, #edf3ff 100%);
   overflow-x: hidden;
 }
-  
+
 .resource-content {
   width: min(72vw, calc(100% - 32px));
   max-width: 1280px;
@@ -179,15 +181,41 @@ h1 {
   margin-bottom: 30px;
 }
 
-.header-row {
-  display: flex;
+.category-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
   margin-bottom: 20px;
 }
 
-.header-row p {
+.category-hero-icon {
+  width: 108px;
+  height: 108px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #2e6bba, #57a5ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 14px 24px rgba(46, 107, 186, 0.2);
+  overflow: hidden;
+}
+
+.category-hero-icon img {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+  display: block;
+}
+
+.category-hero-text h2 {
+  margin: 0 0 6px;
+  font-size: 32px;
+  line-height: 1.25;
+  color: #16335b;
+}
+
+.category-hero-text p {
   margin: 0;
   color: #5a6a85;
 }
@@ -222,9 +250,13 @@ h1 {
     font-size: 40px;
   }
 
-  .header-row {
-    align-items: flex-start;
-    flex-direction: column;
+  .category-hero {
+    grid-template-columns: 1fr;
+    justify-items: flex-start;
+  }
+
+  .summary-chip {
+    min-width: 0;
   }
 }
 </style>
