@@ -14,16 +14,12 @@
             </div>
 
             <div class="ai-time">
-              AI工具使用时长：{{ homeData.aiUsageDuration || '0时0分0秒' }}
+              AI 工具使用时长：{{ homeData.aiUsageDuration || '0时0分0秒' }}
             </div>
 
             <div class="completion">
               <div class="completion-label">虚拟仿真训练完成率</div>
-              <el-progress
-                type="dashboard"
-                :percentage="homeData.simulationCompletion || 0"
-                :width="164"
-              />
+              <el-progress type="dashboard" :percentage="homeData.simulationCompletion || 0" :width="164" />
             </div>
           </div>
 
@@ -66,15 +62,15 @@
 
       <el-card class="nav-card" shadow="never">
         <div class="nav-actions">
-          <div class="nav-btn" @click="goMoralExam">
-            <span>德育画像<br />构建与考试</span>
-          </div>
-          <div class="nav-btn" @click="goResults">
-            <span>结果查看</span>
-          </div>
-          <div class="nav-btn" @click="goStudy">
-            <span>德育资源学习</span>
-          </div>
+          <button class="nav-btn" type="button" @click="goMoralExam" aria-label="德育画像构建与考试">
+            <img :src="moralExamButton" alt="德育画像构建与考试" class="nav-btn-image" />
+          </button>
+          <button class="nav-btn" type="button" @click="goResults" aria-label="结果查看">
+            <img :src="resultButton" alt="结果查看" class="nav-btn-image" />
+          </button>
+          <button class="nav-btn" type="button" @click="goStudy" aria-label="德育资源学习">
+            <img :src="resourceStudyButton" alt="德育资源学习" class="nav-btn-image" />
+          </button>
         </div>
       </el-card>
     </div>
@@ -88,6 +84,9 @@ import { getUserHomeData } from '@/api/user'
 import { parseLevel } from '@/utils/level'
 import LevelBadge from '@/components/common/LevelBadge.vue'
 import ScoreRadarChart from '@/components/common/ScoreRadarChart.vue'
+import moralExamButton from '@/assets/images/button_德育画像构建与考试_174_174.png'
+import resultButton from '@/assets/images/button_结果查看_174_174.png'
+import resourceStudyButton from '@/assets/images/button_德育资源学习_174_174.png'
 
 const router = useRouter()
 
@@ -95,12 +94,10 @@ const homeData = ref({
   studentId: '',
   studentName: '',
   phone: '',
-
   levelValue: 3,
   aiUsageDuration: 120,
   highestScore: 88,
   lowestScore: 72,
-
   simulationCompletion: 0,
   studyProgressList: [],
   scoreDimensions: []
@@ -119,9 +116,7 @@ const radarScores = computed(() => {
         { label: '提升后成绩', color: '#409eff' },
         { label: '初始成绩', color: '#e6a23c' }
       ]
-    : [
-        { label: '提升后成绩', color: '#409eff' }
-      ]
+    : [{ label: '提升后成绩', color: '#409eff' }]
 })
 
 function getProgressColor(val) {
@@ -146,7 +141,6 @@ async function loadData() {
   try {
     const res = await getUserHomeData()
     const data = res.data?.data || res.data || {}
-
     homeData.value = {
       ...homeData.value,
       ...data
@@ -158,7 +152,6 @@ async function loadData() {
 
 function loadLoginUser() {
   const localUser = JSON.parse(localStorage.getItem('userInfo') || '{}')
-
   homeData.value.studentId = localUser.student_no || ''
   homeData.value.studentName = localUser.real_name || ''
   homeData.value.phone = localUser.phone || ''
@@ -287,25 +280,27 @@ onMounted(() => {
 }
 
 .nav-btn {
-  width: clamp(142px, 11vw, 170px);
-  height: clamp(142px, 11vw, 170px);
-  border-radius: 50%;
-  border: 2px solid #dcdfe6;
-  display: flex;
+  width: 174px;
+  height: 174px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  font-size: clamp(22px, 1.45vw, 28px);
+  border: none;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
-  transition: all 0.25s;
-  background: #fff;
-  padding: 14px;
+  transition: transform 0.25s;
 }
 
 .nav-btn:hover {
   transform: translateY(-4px);
-  border-color: #409eff;
-  color: #409eff;
+}
+
+.nav-btn-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 @media (max-width: 1440px) {

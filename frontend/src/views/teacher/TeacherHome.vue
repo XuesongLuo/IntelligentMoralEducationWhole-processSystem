@@ -7,11 +7,7 @@
       @toggle="toggleSidebar"
       @select-user="handleSelectUser"
     />
-    <div
-      v-if="!sidebarCollapsed"
-      class="page-mask"
-      @click="toggleSidebar"
-    />
+    <div v-if="!sidebarCollapsed" class="page-mask" @click="toggleSidebar" />
 
     <div class="content" :class="{ expand: sidebarCollapsed, dimmed: !sidebarCollapsed }">
       <el-card class="overview-card" shadow="never">
@@ -32,11 +28,7 @@
 
             <div class="completion">
               <div class="completion-label">虚拟仿真训练完成率</div>
-              <el-progress
-                type="dashboard"
-                :percentage="homeData.simulationCompletion || 0"
-                :width="164"
-              />
+              <el-progress type="dashboard" :percentage="homeData.simulationCompletion || 0" :width="164" />
             </div>
           </div>
 
@@ -78,19 +70,21 @@
 
       <el-card class="nav-card" shadow="never">
         <div class="nav-actions">
-          <div
+          <button
             class="nav-btn"
             :class="{ disabled: !isViewingSelf }"
+            type="button"
             @click="goMoralExam"
+            aria-label="德育画像构建与考试"
           >
-            <span>德育画像<br />构建与考试</span>
-          </div>
-          <div class="nav-btn" @click="goResults">
-            <span>结果查看</span>
-          </div>
-          <div class="nav-btn" @click="goStudy">
-            <span>德育资源学习</span>
-          </div>
+            <img :src="moralExamButton" alt="德育画像构建与考试" class="nav-btn-image" />
+          </button>
+          <button class="nav-btn" type="button" @click="goResults" aria-label="结果查看">
+            <img :src="resultButton" alt="结果查看" class="nav-btn-image" />
+          </button>
+          <button class="nav-btn" type="button" @click="goStudy" aria-label="德育资源学习">
+            <img :src="resourceStudyButton" alt="德育资源学习" class="nav-btn-image" />
+          </button>
         </div>
       </el-card>
     </div>
@@ -108,6 +102,9 @@ import { useTeacherViewStore } from '@/stores/teacherView'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
 import LevelBadge from '@/components/common/LevelBadge.vue'
 import ScoreRadarChart from '@/components/common/ScoreRadarChart.vue'
+import moralExamButton from '@/assets/images/button_德育画像构建与考试_174_174.png'
+import resultButton from '@/assets/images/button_结果查看_174_174.png'
+import resourceStudyButton from '@/assets/images/button_德育资源学习_174_174.png'
 
 const router = useRouter()
 const teacherViewStore = useTeacherViewStore()
@@ -366,30 +363,32 @@ onMounted(async () => {
 }
 
 .nav-btn {
-  width: clamp(142px, 11vw, 168px);
-  height: clamp(142px, 11vw, 168px);
-  border-radius: 50%;
-  border: 2px solid #dcdfe6;
-  display: flex;
+  width: 174px;
+  height: 174px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  font-size: clamp(22px, 1.4vw, 27px);
+  border: none;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
-  transition: all 0.25s;
-  background: #fff;
-  padding: 14px;
+  transition: transform 0.25s;
 }
 
 .nav-btn:hover {
   transform: translateY(-4px);
-  border-color: #409eff;
-  color: #409eff;
 }
 
 .nav-btn.disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.nav-btn-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .page-mask {
