@@ -33,6 +33,7 @@ import {
   notifyExamWarning,
   shouldShowActiveExamNotice
 } from '@/utils/examSession'
+import { ROUTE_META_MAP, setDocumentMeta } from '@/utils/documentMeta'
 
 const routes = [
   {
@@ -236,6 +237,9 @@ router.beforeEach((to, from, next) => {
 })
 
 router.afterEach(to => {
+  const routeMeta = ROUTE_META_MAP[to.name]
+  setDocumentMeta(routeMeta)
+
   const token = localStorage.getItem('token')
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   const activeExamSession = getActiveExamSession()

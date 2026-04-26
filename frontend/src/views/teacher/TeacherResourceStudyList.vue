@@ -129,7 +129,8 @@ import {
   updateResourceVisibility,
   visitResource
 } from '@/api/resource'
-import { getResourceCategoryIcon } from '@/utils/resourceCategoryIcons'
+import { getResourceCategoryFavicon, getResourceCategoryIcon } from '@/utils/resourceCategoryIcons'
+import { APP_NAME, setDocumentMeta } from '@/utils/documentMeta'
 
 const route = useRoute()
 const router = useRouter()
@@ -182,6 +183,10 @@ async function loadResources() {
     categoryName.value = data.categoryName || ''
     records.value = data.records || []
     total.value = data.total || 0
+    setDocumentMeta({
+      title: `${categoryName.value || '德育资源学习'} - ${APP_NAME}`,
+      favicon: getResourceCategoryFavicon(categoryName.value)
+    })
   } catch (error) {
     ElMessage.error('获取资源列表失败')
   }
