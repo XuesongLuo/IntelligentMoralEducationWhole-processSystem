@@ -1,6 +1,5 @@
 <template>
   <div class="page-wrap">
-
     <div class="main-box">
       <h1>德育画像构建与考试</h1>
 
@@ -10,9 +9,15 @@
         </div>
 
         <div class="module-actions">
-          <div class="triangle-btn" @click="goNotice('survey')"><span>画像构建</span></div>
-          <div class="hexagon-btn" @click="goNotice('integrity')"><span>诚信考核</span></div>
-          <div class="square-btn" @click="goNotice('ideology')"><span>思政考试</span></div>
+          <button class="exam-btn" type="button" @click="goNotice('survey')" aria-label="画像构建">
+            <img :src="surveyButton" alt="画像构建" class="exam-btn-image" />
+          </button>
+          <button class="exam-btn" type="button" @click="goNotice('integrity')" aria-label="诚信考核">
+            <img :src="integrityButton" alt="诚信考核" class="exam-btn-image" />
+          </button>
+          <button class="exam-btn" type="button" @click="goNotice('ideology')" aria-label="思政考试">
+            <img :src="ideologyButton" alt="思政考试" class="exam-btn-image" />
+          </button>
         </div>
       </el-card>
     </div>
@@ -21,6 +26,9 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import surveyButton from '@/assets/images/moral-exam/survey.png'
+import integrityButton from '@/assets/images/moral-exam/integrity.png'
+import ideologyButton from '@/assets/images/moral-exam/ideology.png'
 
 const router = useRouter()
 
@@ -39,107 +47,59 @@ function goNotice(type) {
   background: #f5f7fa;
   overflow-x: hidden;
 }
+
 .main-box {
   width: min(72vw, calc(100% - 32px));
   max-width: 1380px;
   margin: 20px auto;
 }
+
 h1 {
   text-align: center;
   font-size: 48px;
   margin-bottom: 30px;
 }
+
 .panel {
   min-height: 520px;
   border-radius: 16px;
 }
+
 .back-row {
   margin-bottom: 40px;
 }
+
 .module-actions {
   min-height: 360px;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   align-items: center;
-  gap: clamp(28px, 4vw, 56px);
-  flex-wrap: wrap;
+  justify-items: center;
+  gap: 20px;
 }
-.triangle-btn,
-.hexagon-btn,
-.square-btn {
+
+.exam-btn {
   width: 232px;
   height: 232px;
-  position: relative;
-  display: flex;
-  justify-content: center;
+  display: inline-flex;
   align-items: center;
-  text-align: center;
-  font-size: 34px;
-  line-height: 1.25;
-  font-weight: 500;
-  padding: 20px;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
-  transition: all 0.25s;
-  box-sizing: border-box;
-  color: #303133;
+  transition: transform 0.25s;
 }
-.triangle-btn::before,
-.triangle-btn::after,
-.hexagon-btn::before,
-.hexagon-btn::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.triangle-btn {
-  padding-top: 58px;
-}
-.triangle-btn::before {
-  background: #333;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-}
-.triangle-btn::after {
-  inset: 3px;
-  background: #fff;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-}
-.hexagon-btn {
-  padding-inline: 34px;
-}
-.hexagon-btn::before {
-  background: #333;
-  clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
-}
-.hexagon-btn::after {
-  inset: 3px;
-  background: #fff;
-  clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
-}
-.square-btn {
-  border: 2px solid #333;
-  border-radius: 24px;
-}
-.triangle-btn,
-.hexagon-btn {
-  isolation: isolate;
-}
-.triangle-btn,
-.hexagon-btn,
-.square-btn {
-  z-index: 0;
-}
-.triangle-btn span,
-.hexagon-btn span,
-.square-btn span {
-  position: relative;
-  z-index: 1;
-}
-.triangle-btn:hover,
-.hexagon-btn:hover,
-.square-btn:hover {
-  color: #409eff;
+
+.exam-btn:hover {
   transform: translateY(-4px);
+}
+
+.exam-btn-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 @media (max-width: 960px) {
@@ -149,7 +109,7 @@ h1 {
   }
 
   .module-actions {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     gap: 28px;
   }
 }
