@@ -7,11 +7,7 @@
       @toggle="toggleSidebar"
       @select-user="handleSelectUser"
     />
-    <div
-      v-if="!sidebarCollapsed"
-      class="page-mask"
-      @click="toggleSidebar"
-    />
+    <div v-if="!sidebarCollapsed" class="page-mask" @click="toggleSidebar" />
 
     <div class="content" :class="{ dimmed: !sidebarCollapsed }">
       <h1>{{ categoryName || '德育资源学习' }}</h1>
@@ -21,15 +17,17 @@
           <el-button @click="goBack">上一级</el-button>
         </div>
 
-        <div class="header-row">
-          <div>
+        <div class="category-hero">
+          <div class="category-hero-icon" v-if="categoryIcon">
+            <img :src="categoryIcon" :alt="categoryName" />
+          </div>
+          <div class="category-hero-text">
+            <h2>{{ categoryName || '德育资源学习' }}</h2>
             <p>当前查看对象：{{ selectedUserLabel }}</p>
           </div>
           <div class="actions-row">
             <div class="summary-chip">共 {{ total }} 条资源</div>
-            <el-button type="primary" @click="openCreateDialog">
-              新增资源
-            </el-button>
+            <el-button type="primary" @click="openCreateDialog">新增资源</el-button>
           </div>
         </div>
 
@@ -131,6 +129,7 @@ import {
   updateResourceVisibility,
   visitResource
 } from '@/api/resource'
+import { getResourceCategoryIcon } from '@/utils/resourceCategoryIcons'
 
 const route = useRoute()
 const router = useRouter()
@@ -151,6 +150,7 @@ const form = reactive({
 let heartbeatTimer = null
 
 const categoryId = computed(() => Number(route.params.categoryId))
+const categoryIcon = computed(() => getResourceCategoryIcon(categoryName.value))
 const selectedUserLabel = computed(() => {
   const user = selectedUser.value
   if (!user) return '未选择用户'
@@ -342,9 +342,7 @@ watch(
   () => isViewingSelf.value,
   value => {
     stopHeartbeat()
-    if (value) {
-      startHeartbeat()
-    }
+    if (value) startHeartbeat()
   },
   { immediate: true }
 )
@@ -399,7 +397,7 @@ onBeforeUnmount(() => {
   position: relative;
   overflow-x: hidden;
 }
-  
+
 .content {
   width: min(72vw, calc(100% - 40px));
   max-width: 1280px;
@@ -424,15 +422,41 @@ h1 {
   margin-bottom: 30px;
 }
 
-.header-row {
-  display: flex;
-  justify-content: space-between;
+.category-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   margin-bottom: 20px;
 }
 
-.header-row p {
+.category-hero-icon {
+  width: 108px;
+  height: 108px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #2e6bba, #57a5ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 14px 24px rgba(46, 107, 186, 0.2);
+  overflow: hidden;
+}
+
+.category-hero-icon img {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
+  display: block;
+}
+
+.category-hero-text h2 {
+  margin: 0 0 6px;
+  font-size: 32px;
+  line-height: 1.25;
+  color: #16335b;
+}
+
+.category-hero-text p {
   margin: 0;
   color: #5a6a85;
 }
@@ -490,16 +514,16 @@ h1 {
 
 @media (max-width: 840px) {
   .content {
-      width: calc(100% - 20px);
-      max-width: none;
-    }
+    width: calc(100% - 20px);
+    max-width: none;
+  }
 
   h1 {
     font-size: 40px;
   }
 
-  .header-row {
-    flex-direction: column;
+  .category-hero {
+    grid-template-columns: 1fr;
     align-items: flex-start;
   }
 

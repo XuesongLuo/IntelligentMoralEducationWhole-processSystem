@@ -20,8 +20,14 @@
             @click="goCategory(item)"
           >
             <div class="circle-button">
-              <span>{{ item.name }}</span>
+              <img
+                v-if="getCategoryIcon(item.name)"
+                :src="getCategoryIcon(item.name)"
+                :alt="item.name"
+                class="category-icon"
+              />
             </div>
+            <div class="category-name">{{ item.name }}</div>
             <div class="battery-wrap">
               <div class="battery">
                 <span
@@ -51,6 +57,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getResourceCategories, submitResourceHeartbeat } from '@/api/resource'
+import { getResourceCategoryIcon } from '@/utils/resourceCategoryIcons'
 
 const router = useRouter()
 const categories = ref([])
@@ -62,6 +69,10 @@ function formatPercent(value) {
 
 function filledSegments(progress) {
   return Math.max(0, Math.min(10, Math.round((Number(progress) || 0) / 10)))
+}
+
+function getCategoryIcon(name) {
+  return getResourceCategoryIcon(name)
 }
 
 function goBack() {
@@ -170,24 +181,32 @@ h1 {
 .circle-button {
   width: 220px;
   height: 220px;
-  margin: 0 auto 20px;
+  margin: 0 auto 18px;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.18) 30%, transparent 32%),
-    linear-gradient(145deg, #2e6bba, #57a5ff);
-  color: #fff;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.18) 30%, transparent 32%), linear-gradient(145deg, #2e6bba, #57a5ff);
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
   box-shadow: inset 0 2px 12px rgba(255, 255, 255, 0.16), 0 18px 28px rgba(46, 107, 186, 0.28);
+  overflow: hidden;
 }
 
-.circle-button span {
-  width: 70%;
+.category-icon {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  display: block;
+}
+
+.category-name {
+  min-height: 56px;
+  margin: 0 auto 16px;
+  width: 86%;
+  text-align: center;
   font-size: 28px;
-  line-height: 1.45;
+  line-height: 1.35;
   font-weight: 600;
+  color: #1b3f73;
 }
 
 .battery-wrap {
@@ -260,7 +279,7 @@ h1 {
     height: 190px;
   }
 
-  .circle-button span {
+  .category-name {
     font-size: 24px;
   }
 }
