@@ -107,7 +107,7 @@ function goBack() {
 }
 
 function goCategory(item) {
-  router.push(`/teacher/resource-study/${item.id}`)
+  router.push(`/teacher/resource-study/${encodeURIComponent(item.code)}`)
 }
 
 async function loadCategories() {

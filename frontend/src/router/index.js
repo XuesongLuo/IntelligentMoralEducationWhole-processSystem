@@ -97,7 +97,7 @@ const routes = [
         component: StudentResourceStudyHub
       },
       {
-        path: 'resource-study/:categoryId',
+        path: 'resource-study/:categoryCode',
         name: 'StudentResourceStudyList',
         component: StudentResourceStudyList,
         props: true
@@ -146,7 +146,7 @@ const routes = [
         component: TeacherResourceStudyHub
       },
       {
-        path: 'resource-study/:categoryId',
+        path: 'resource-study/:categoryCode',
         name: 'TeacherResourceStudyList',
         component: TeacherResourceStudyList,
         props: true

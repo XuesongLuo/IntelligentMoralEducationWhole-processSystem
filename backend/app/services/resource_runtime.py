@@ -138,7 +138,7 @@ def build_resource_list(
     db: Session,
     *,
     user_id: int,
-    category_id: int,
+    category_code: str,
     page_num: int,
     page_size: int,
     include_hidden: bool = False,
@@ -146,7 +146,7 @@ def build_resource_list(
     category = (
         db.query(ResourceCategory)
         .filter(
-            ResourceCategory.id == category_id,
+            ResourceCategory.code == category_code,
             ResourceCategory.is_enabled == True,
         )
         .first()
