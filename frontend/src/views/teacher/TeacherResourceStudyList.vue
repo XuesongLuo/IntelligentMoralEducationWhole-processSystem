@@ -140,13 +140,14 @@ const pageSize = ref(10)
 const records = ref([])
 const dialogVisible = ref(false)
 const editingRow = ref(null)
+const currentCategoryId = ref(null)
 const form = reactive({
   title: '',
   url: ''
 })
 let heartbeatTimer = null
 
-const categoryId = computed(() => Number(route.params.categoryId))
+const categoryCode = computed(() => String(route.params.categoryCode || ''))
 const selectedUserLabel = computed(() => {
   const user = selectedUser.value
   if (!user) return '未选择用户'
@@ -169,13 +170,14 @@ async function loadResources() {
   if (!selectedUser.value) return
 
   try {
-    const res = await getResourceItems(categoryId.value, {
+    const res = await getResourceItems(categoryCode.value, {
       userId: selectedUser.value.id,
       pageNum: pageNum.value,
       pageSize: pageSize.value
     })
     const data = res.data?.data || res.data || {}
     categoryName.value = data.categoryName || ''
+    currentCategoryId.value = data.categoryId || null
     records.value = data.records || []
     total.value = data.total || 0
     setDocumentMeta({
@@ -248,7 +250,7 @@ async function submitDialog() {
       })
       ElMessage.success('资源已更新')
     } else {
-      await createResourceItem(categoryId.value, {
+      await createResourceItem(currentCategoryId.value, {
         title: form.title,
         url: form.url
       })
@@ -300,7 +302,7 @@ function handlePageChange(page) {
 async function sendHeartbeat() {
   if (!isViewingSelf.value) return
   try {
-    await submitResourceHeartbeat({ categoryId: categoryId.value })
+    await submitResourceHeartbeat({})
   } catch (error) {
     console.error('teacher resource heartbeat failed', error)
   }
@@ -322,7 +324,7 @@ function stopHeartbeat() {
 }
 
 watch(
-  () => route.params.categoryId,
+  () => route.params.categoryCode,
   () => {
     pageNum.value = 1
     loadResources()

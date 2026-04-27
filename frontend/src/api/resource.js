@@ -13,9 +13,9 @@ export function getResourceCategories(params) {
   })
 }
 
-export function getResourceItems(categoryId, params) {
+export function getResourceItems(categoryCode, params) {
   return request({
-    url: `${getRolePrefix()}/resources/categories/${categoryId}/items`,
+    url: `${getRolePrefix()}/resources/categories/${encodeURIComponent(categoryCode)}/items`,
     method: 'get',
     params
   })

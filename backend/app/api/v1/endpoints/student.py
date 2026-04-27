@@ -476,9 +476,9 @@ def get_student_resource_categories(
     return ResourceCategoryListResponseModel(data=ResourceCategoryListData(items=items))
 
 
-@router.get("/resources/categories/{category_id}/items", response_model=ResourceListResponseModel)
+@router.get("/resources/categories/{category_code}/items", response_model=ResourceListResponseModel)
 def get_student_resource_items(
-    category_id: int,
+    category_code: str,
     pageNum: int = Query(default=1, ge=1),
     pageSize: int = Query(default=10, ge=1, le=100),
     current_user: AuthUser = Depends(get_current_user),
@@ -491,7 +491,7 @@ def get_student_resource_items(
         data = build_resource_list(
             db,
             user_id=current_user.id,
-            category_id=category_id,
+            category_code=category_code,
             page_num=pageNum,
             page_size=pageSize,
             include_hidden=False,

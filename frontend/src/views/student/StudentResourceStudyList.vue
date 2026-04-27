@@ -69,7 +69,7 @@ const pageSize = ref(10)
 const records = ref([])
 let heartbeatTimer = null
 
-const categoryId = () => Number(route.params.categoryId)
+const categoryCode = () => String(route.params.categoryCode || '')
 
 function goBack() {
   router.push('/student/resource-study')
@@ -77,7 +77,7 @@ function goBack() {
 
 async function loadResources() {
   try {
-    const res = await getResourceItems(categoryId(), {
+    const res = await getResourceItems(categoryCode(), {
       pageNum: pageNum.value,
       pageSize: pageSize.value
     })
@@ -118,7 +118,7 @@ function handlePageChange(page) {
 
 async function sendHeartbeat() {
   try {
-    await submitResourceHeartbeat({ categoryId: categoryId() })
+    await submitResourceHeartbeat({})
   } catch (error) {
     console.error('resource heartbeat failed', error)
   }
@@ -132,7 +132,7 @@ function startHeartbeat() {
 }
 
 watch(
-  () => route.params.categoryId,
+  () => route.params.categoryCode,
   () => {
     pageNum.value = 1
     loadResources()
