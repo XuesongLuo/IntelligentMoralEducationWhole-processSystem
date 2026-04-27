@@ -38,7 +38,7 @@
                   :color="getProgressColor(item.progress)"
                 />
               </div>
-              <div class="remain">{{ item.leftCount }} left</div>
+              <div class="remain">剩余 {{ item.leftCount }} 项</div>
             </div>
           </div>
 
@@ -244,12 +244,19 @@ onMounted(() => {
   font-size: 26px;
 }
 
+.middle-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px 0;
+}
+
 .progress-row {
   display: grid;
   grid-template-columns: minmax(96px, 140px) minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 24px;
 }
 
 .label {
@@ -261,10 +268,13 @@ onMounted(() => {
   font-size: 14px;
   color: #666;
   white-space: nowrap;
+  min-width: 64px;
+  text-align: right;
 }
 
 .score-list {
   display: flex;
+  justify-content: center;
   gap: 16px;
   margin-bottom: 18px;
   flex-wrap: wrap;
