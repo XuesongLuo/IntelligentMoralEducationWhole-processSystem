@@ -242,6 +242,9 @@ onMounted(() => {
   margin-top: 0;
   margin-bottom: 16px;
   font-size: 26px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
 }
 
 .middle-panel {
