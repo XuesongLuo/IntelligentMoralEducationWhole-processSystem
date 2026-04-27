@@ -325,15 +325,16 @@ onMounted(async () => {
   margin-top: 0;
   margin-bottom: 16px;
   font-size: 26px;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
 }
 
 .middle-panel {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: 10px 0;
+}
+
+.right-panel {
   padding: 10px 0;
 }
 
