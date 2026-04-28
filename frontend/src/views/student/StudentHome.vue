@@ -10,7 +10,7 @@
             </div>
 
             <div class="level-box">
-              <LevelBadge :level="levelInfo" />
+              <LevelBadge :level-value="homeData.levelValue || 0" />
             </div>
 
             <div class="ai-time">
@@ -81,7 +81,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserHomeData } from '@/api/user'
-import { parseLevel } from '@/utils/level'
 import LevelBadge from '@/components/common/LevelBadge.vue'
 import ScoreRadarChart from '@/components/common/ScoreRadarChart.vue'
 import moralExamButton from '@/assets/images/home-navigation/moral-exam.png'
@@ -102,8 +101,6 @@ const homeData = ref({
   studyProgressList: [],
   scoreDimensions: []
 })
-
-const levelInfo = computed(() => parseLevel(homeData.value.levelValue || 0))
 
 const radarScores = computed(() => {
   const list = homeData.value.scoreDimensions || []

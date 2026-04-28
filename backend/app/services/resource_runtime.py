@@ -13,6 +13,8 @@ from app.schemas.resource import ResourceCategoryProgressItem, ResourceListData,
 
 
 redis_client = get_redis()
+LEVEL_COMPLETION_SECONDS = 1800
+MAX_LEVEL_VALUE = 125
 
 
 def resource_session_key(user_id: int) -> str:
@@ -79,9 +81,31 @@ def get_exam_total_active_seconds(db: Session, user_id: int) -> int:
     return int(total or 0)
 
 
+def get_total_ai_usage_seconds(db: Session, user_id: int) -> int:
+    return get_exam_total_active_seconds(db, user_id) + get_resource_total_active_seconds(user_id)
+
+
 def get_total_ai_usage_duration(db: Session, user_id: int) -> str:
-    total_seconds = get_exam_total_active_seconds(db, user_id) + get_resource_total_active_seconds(user_id)
-    return format_duration(total_seconds)
+    return format_duration(get_total_ai_usage_seconds(db, user_id))
+
+
+def get_completed_attempt_count(db: Session, user_id: int) -> int:
+    total = (
+        db.query(func.count(AssessmentAttempt.id))
+        .filter(
+            AssessmentAttempt.user_id == user_id,
+            AssessmentAttempt.status == "completed",
+            AssessmentAttempt.submitted_at.isnot(None),
+        )
+        .scalar()
+    )
+    return int(total or 0)
+
+
+def get_level_value(db: Session, user_id: int) -> int:
+    usage_completion_count = get_total_ai_usage_seconds(db, user_id) // LEVEL_COMPLETION_SECONDS
+    attempt_completion_count = get_completed_attempt_count(db, user_id)
+    return min(int(usage_completion_count + attempt_completion_count), MAX_LEVEL_VALUE)
 
 
 def build_category_progress_list(db: Session, user_id: int) -> list[ResourceCategoryProgressItem]:
