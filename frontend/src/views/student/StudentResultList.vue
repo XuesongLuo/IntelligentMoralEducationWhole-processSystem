@@ -13,7 +13,7 @@
           <el-table-column prop="title" label="标题" />
           <el-table-column prop="submitTime" label="提交时间" width="220" />
           <el-table-column prop="durationMinutes" label="答题时长(min)" width="140" />
-          <el-table-column label="操作" width="260">
+          <el-table-column label="操作" width="360">
             <template #default="{ row }">
               <el-button
                 v-if="row.analysisReady"
@@ -24,8 +24,6 @@
                 点击查看
               </el-button>
               <template v-else>
-                <span v-if="row.analysisStatus === 'failed'" class="status-failed">分析失败</span>
-                <span v-else class="status-pending">模型分析中...</span>
                 <el-button
                   v-if="row.analysisStatus === 'failed'"
                   type="danger"
@@ -34,6 +32,10 @@
                 >
                   重新分析
                 </el-button>
+                <span v-if="row.analysisStatus === 'failed'" class="status-failed">
+                  {{ failedAnalysisMessage }}
+                </span>
+                <span v-else class="status-pending">模型分析中...</span>
               </template>
             </template>
           </el-table-column>
@@ -78,6 +80,8 @@ const query = ref({
   pageSize: 10
 })
 
+const failedAnalysisMessage = '额度耗尽，联系管理员@DYQ'
+
 function goBack() {
   router.back()
 }
@@ -104,7 +108,7 @@ async function retryAnalysis(row) {
     ElMessage.success('已触发重新分析，请稍后刷新查看')
     loadList()
   } catch (error) {
-    const message = error?.response?.data?.detail || '重新分析失败，请稍后重试'
+    const message = error?.response?.data?.detail || failedAnalysisMessage
     ElMessage.error(message)
   }
 }
@@ -148,7 +152,7 @@ h1 {
 
 .status-failed {
   color: #f56c6c;
-  margin-right: 8px;
+  margin-left: 8px;
 }
 
 .pagination-row {
