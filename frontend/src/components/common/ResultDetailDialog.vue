@@ -2,7 +2,7 @@
   <el-dialog
     :model-value="modelValue"
     width="90%"
-    top="4vh"
+    top="8vh"
     destroy-on-close
     :close-on-click-modal="false"
     @close="closeDialog"
@@ -204,18 +204,18 @@ watch(
   display: grid;
   grid-template-columns: 240px 1fr 320px;
   gap: 16px;
-  min-height: 620px;
+  min-height: 700px;
 }
 
 .left-info,
 .middle-answer,
 .right-analysis {
-  min-height: 620px;
+  min-height: 700px;
 }
 
 .answer-scroll,
 .analysis-scroll {
-  height: 560px;
+  height: 640px;
   overflow-y: auto;
 }
 

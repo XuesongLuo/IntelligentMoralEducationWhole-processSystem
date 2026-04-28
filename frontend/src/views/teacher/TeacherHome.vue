@@ -308,13 +308,17 @@ onMounted(async () => {
 
 .completion {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
+  gap: 16px;
 }
 
 .completion-label {
-  margin-bottom: 12px;
   font-size: 16px;
+  max-width: 84px;
+  line-height: 1.4;
+  text-align: right;
 }
 
 .middle-panel h3,
@@ -368,6 +372,11 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.score-row span:last-child {
+  white-space: nowrap;
 }
 
 .score-dot {
@@ -472,6 +481,21 @@ onMounted(async () => {
 
   .remain {
     white-space: normal;
+  }
+
+  .completion {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .completion-label {
+    max-width: none;
+    text-align: center;
+  }
+
+  .score-row span:last-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 </style>
