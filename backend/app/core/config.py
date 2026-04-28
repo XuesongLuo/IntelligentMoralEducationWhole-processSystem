@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 
     AI_ANALYSIS_WEBHOOK_URL: str = "http://localhost:11015/api/v1/evaluation/analyze"
     AI_ANALYSIS_MODEL: str = ""
+    AI_ANALYSIS_MODELS: str = ""
     AI_CALLBACK_TOKEN: str = "imews-ai-callback-token"
     AI_REQUEST_TIMEOUT_SECONDS: int = 15
 
@@ -57,6 +58,14 @@ class Settings(BaseSettings):
     def redis_url(self) -> str:
         auth_part = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
         return f"redis://{auth_part}{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    @property
+    def ai_analysis_model_list(self) -> list[str]:
+        if self.AI_ANALYSIS_MODELS.strip():
+            return [item.strip() for item in self.AI_ANALYSIS_MODELS.split(",") if item.strip()]
+        if self.AI_ANALYSIS_MODEL.strip():
+            return [self.AI_ANALYSIS_MODEL.strip()]
+        return []
 
 
 @lru_cache

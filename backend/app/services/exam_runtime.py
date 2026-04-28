@@ -213,6 +213,7 @@ def build_ai_payload(
     user: AuthUser,
     questions: list[AssessmentQuestion],
     answers: list[AssessmentAnswer],
+    model: str | None = None,
 ) -> dict:
     question_map = {question.id: question for question in questions}
     student_identifier = (
@@ -240,8 +241,8 @@ def build_ai_payload(
         "examTime": str(attempt.duration_seconds or 0),
         "examContent": answer_items,
     }
-    if settings.AI_ANALYSIS_MODEL:
-        payload["model"] = settings.AI_ANALYSIS_MODEL
+    if model:
+        payload["model"] = model
     return payload
 
 
@@ -312,6 +313,39 @@ def dispatch_ai_analysis(payload: dict, attempt_id: int | None = None) -> tuple[
         return False, str(exc), None
     except Exception as exc:
         return False, f"AI request failed: {exc}", None
+
+
+def dispatch_ai_analysis_with_fallback(
+    *,
+    attempt: AssessmentAttempt,
+    paper: AssessmentPaper,
+    user: AuthUser,
+    questions: list[AssessmentQuestion],
+    answers: list[AssessmentAnswer],
+) -> tuple[bool, str, dict | None]:
+    model_candidates = settings.ai_analysis_model_list or [None]
+    error_messages: list[str] = []
+
+    for model_name in model_candidates:
+        payload_json = build_ai_payload(
+            attempt=attempt,
+            paper=paper,
+            user=user,
+            questions=questions,
+            answers=answers,
+            model=model_name,
+        )
+        success, error_message, ai_result_payload = dispatch_ai_analysis(
+            payload_json,
+            attempt_id=attempt.id,
+        )
+        if success:
+            return True, "", ai_result_payload
+
+        model_label = model_name or "default"
+        error_messages.append(f"{model_label}: {error_message}")
+
+    return False, " | ".join(error_messages), None
 
 
 def apply_ai_callback(
@@ -394,16 +428,12 @@ def _run_ai_analysis_job(attempt_id: int) -> None:
             .all()
         )
 
-        payload_json = build_ai_payload(
+        success, error_message, ai_result_payload = dispatch_ai_analysis_with_fallback(
             attempt=attempt,
             paper=paper,
             user=user,
             questions=questions,
             answers=answers,
-        )
-        success, error_message, ai_result_payload = dispatch_ai_analysis(
-            payload_json,
-            attempt_id=attempt_id,
         )
 
         if not success:
