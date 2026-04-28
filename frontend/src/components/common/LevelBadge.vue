@@ -1,14 +1,16 @@
 <template>
   <div class="level-badge">
-    <span v-for="n in crowns" :key="'crown' + n">👑</span>
-    <span v-for="n in suns" :key="'sun' + n">☀️</span>
-    <span v-for="n in moons" :key="'moon' + n">🌙</span>
-    <span v-for="n in stars" :key="'star' + n">⭐</span>
+    <span v-if="currentLevel.icon" class="level-icon">{{ currentLevel.icon }}</span>
+    <span class="level-text">
+      {{ currentLevel.label }}
+      <template v-if="currentLevel.count">x{{ currentLevel.count }}</template>
+    </span>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { parseLevel } from '@/utils/level'
 
 const props = defineProps({
   levelValue: {
@@ -17,21 +19,7 @@ const props = defineProps({
   }
 })
 
-const MAX_LEVEL = 5 * 5 * 5 * 5 - 1
-
-const normalizedLevel = computed(() => {
-  return Math.max(0, Math.min(props.levelValue, MAX_LEVEL))
-})
-
-const crowns = computed(() => Math.floor(normalizedLevel.value / 125))
-const remainsAfterCrowns = computed(() => normalizedLevel.value % 125)
-
-const suns = computed(() => Math.floor(remainsAfterCrowns.value / 25))
-const remainsAfterSuns = computed(() => remainsAfterCrowns.value % 25)
-
-const moons = computed(() => Math.floor(remainsAfterSuns.value / 5))
-const stars = computed(() => remainsAfterSuns.value % 5)
-
+const currentLevel = computed(() => parseLevel(props.levelValue))
 </script>
 
 <style scoped>
@@ -39,13 +27,17 @@ const stars = computed(() => remainsAfterSuns.value % 5)
   min-height: 36px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
+
 .level-icon {
-  font-size: 20px;
+  font-size: 22px;
 }
-.level-empty {
-  color: #999;
+
+.level-text {
+  font-size: 16px;
+  color: #1f3f6d;
+  font-weight: 600;
 }
 </style>

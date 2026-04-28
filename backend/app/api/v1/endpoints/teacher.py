@@ -76,6 +76,7 @@ from app.services.exam_runtime import (
 from app.services.resource_runtime import (
     build_category_progress_list,
     build_resource_list,
+    get_level_value,
     get_total_ai_usage_duration,
     heartbeat_resource_session,
     mark_resource_completed,
@@ -721,6 +722,7 @@ def build_home_data(target_user: AuthUser, db: Session) -> StudentHomeData:
         studentId=user_no,
         studentName=target_user.real_name,
         phone=target_user.phone,
+        levelValue=get_level_value(db, target_user.id),
         aiUsageDuration=get_total_ai_usage_duration(db, target_user.id),
         simulationCompletion=simulation_completion,
         studyProgressList=study_progress_list,

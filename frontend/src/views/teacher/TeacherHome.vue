@@ -19,7 +19,7 @@
             </div>
 
             <div class="level-box">
-              <LevelBadge :level="levelInfo" />
+              <LevelBadge :level-value="homeData.levelValue || 0" />
             </div>
 
             <div class="ai-time">
@@ -97,7 +97,6 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { storeToRefs } from 'pinia'
 import { getUserHomeData, getTeacherStudentList } from '@/api/user'
-import { parseLevel } from '@/utils/level'
 import { useTeacherViewStore } from '@/stores/teacherView'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
 import LevelBadge from '@/components/common/LevelBadge.vue'
@@ -120,8 +119,6 @@ const homeData = ref({
   studyProgressList: [],
   scoreDimensions: []
 })
-
-const levelInfo = computed(() => parseLevel(homeData.value.levelValue || 0))
 
 const radarScores = computed(() => {
   const list = homeData.value.scoreDimensions || []
