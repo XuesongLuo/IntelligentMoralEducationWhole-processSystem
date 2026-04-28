@@ -1,15 +1,6 @@
 <template>
   <div class="teacher-page">
-    <TeacherSidebar
-      :collapsed="sidebarCollapsed"
-      :selected-user="selectedUser"
-      :user-list="userList"
-      @toggle="toggleSidebar"
-      @select-user="handleSelectUser"
-    />
-    <div v-if="!sidebarCollapsed" class="page-mask" @click="toggleSidebar" />
-
-    <div class="content" :class="{ dimmed: !sidebarCollapsed }">
+    <div class="content">
       <h1>{{ categoryName || '德育资源学习' }}</h1>
 
       <el-card class="list-card" shadow="never">
@@ -23,14 +14,14 @@
           </div>
           <div class="actions-row">
             <div class="summary-chip">共 {{ total }} 条资源</div>
-            <el-button type="primary" @click="openCreateDialog">新增资源</el-button>
+            <el-button v-if="isViewingSelf" type="primary" @click="openCreateDialog">新增资源</el-button>
           </div>
         </div>
 
         <el-table :data="records" border class="resource-table">
           <el-table-column type="index" label="序号" width="70" />
           <el-table-column prop="title" label="标题" min-width="280" />
-          <el-table-column label="是否展示" width="120">
+          <el-table-column v-if="isViewingSelf" label="是否展示" width="120">
             <template #default="{ row }">
               <el-switch
                 :model-value="row.isVisible"
@@ -52,7 +43,7 @@
               </el-button>
             </template>
           </el-table-column>
-          <el-table-column label="编辑" width="120">
+          <el-table-column v-if="isViewingSelf" label="编辑" width="120">
             <template #default="{ row }">
               <el-button type="warning" plain @click="openEditDialog(row)">
                 编辑
@@ -85,7 +76,7 @@
           <el-input v-model.trim="form.title" maxlength="255" />
         </el-form-item>
         <el-form-item label="链接地址">
-          <el-input v-model.trim="form.url" placeholder="可稍后补充" />
+          <el-input v-model.trim="form.url" placeholder="可稍后补全" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -113,7 +104,6 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { storeToRefs } from 'pinia'
-import TeacherSidebar from '@/components/teacher/TeacherSidebar.vue'
 import { useTeacherViewStore } from '@/stores/teacherView'
 import { getTeacherStudentList } from '@/api/user'
 import {
@@ -131,12 +121,12 @@ import { APP_NAME, setDocumentMeta } from '@/utils/documentMeta'
 const route = useRoute()
 const router = useRouter()
 const teacherViewStore = useTeacherViewStore()
-const { sidebarCollapsed, selectedUser, userList, isViewingSelf } = storeToRefs(teacherViewStore)
+const { selectedUser, userList, isViewingSelf } = storeToRefs(teacherViewStore)
 
 const categoryName = ref('')
 const total = ref(0)
 const pageNum = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(15)
 const records = ref([])
 const dialogVisible = ref(false)
 const editingRow = ref(null)
@@ -153,14 +143,6 @@ const selectedUserLabel = computed(() => {
   if (!user) return '未选择用户'
   return `${user.teacher_no || user.student_no || ''} ${user.real_name || ''}`.trim()
 })
-
-function toggleSidebar() {
-  teacherViewStore.toggleSidebar()
-}
-
-function handleSelectUser(user) {
-  teacherViewStore.selectUser(user)
-}
 
 function goBack() {
   router.push('/teacher/resource-study')
@@ -474,18 +456,6 @@ h1 {
   display: flex;
   gap: 12px;
   margin-left: auto;
-}
-
-.page-mask {
-  position: fixed;
-  inset: 64px 0 0 0;
-  z-index: 1500;
-  background: rgba(18, 30, 48, 0.28);
-  backdrop-filter: blur(2px);
-}
-
-.content.dimmed {
-  filter: brightness(0.88);
 }
 
 @media (max-width: 840px) {

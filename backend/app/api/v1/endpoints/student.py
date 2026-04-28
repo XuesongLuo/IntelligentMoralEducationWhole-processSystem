@@ -482,7 +482,7 @@ def get_student_resource_categories(
 def get_student_resource_items(
     category_code: str,
     pageNum: int = Query(default=1, ge=1),
-    pageSize: int = Query(default=10, ge=1, le=100),
+    pageSize: int = Query(default=15, ge=1, le=100),
     current_user: AuthUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):

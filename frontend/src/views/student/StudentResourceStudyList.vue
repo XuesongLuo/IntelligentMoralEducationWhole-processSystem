@@ -65,7 +65,7 @@ const router = useRouter()
 const categoryName = ref('')
 const total = ref(0)
 const pageNum = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(15)
 const records = ref([])
 let heartbeatTimer = null
 
