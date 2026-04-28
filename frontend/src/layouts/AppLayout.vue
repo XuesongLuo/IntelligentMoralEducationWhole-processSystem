@@ -8,7 +8,7 @@
       :home-disabled="homeDisabled"
       :show-roster-manage="userInfo.role === 'teacher'"
       :roster-manage-disabled="homeDisabled"
-      :show-global-export="userInfo.role === 'teacher'"
+      :show-global-export="showGlobalExport"
       :global-export-disabled="homeDisabled"
       @logout="handleLogout"
       @go-home="handleGoHome"
@@ -77,6 +77,10 @@ const logoutDisabled = computed(() => {
 
 const homeDisabled = computed(() => {
   return isExamPaperRoute(route) || hasActiveExam.value
+})
+
+const showGlobalExport = computed(() => {
+  return userInfo.role === 'teacher' && route.path === '/teacher/results'
 })
 
 function getHomePath() {
