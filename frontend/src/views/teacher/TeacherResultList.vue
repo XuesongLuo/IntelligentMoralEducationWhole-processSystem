@@ -36,7 +36,7 @@
             </el-table-column>
             <el-table-column prop="submitTime" label="提交时间" width="220" />
             <el-table-column prop="durationMinutes" label="答题时长(min)" width="130" />
-            <el-table-column label="操作" width="420">
+            <el-table-column label="操作" width="460">
               <template #default="{ row }">
                 <el-button
                   v-if="row.analysisReady"
@@ -47,8 +47,6 @@
                   点击查看
                 </el-button>
                 <template v-else>
-                  <span v-if="row.analysisStatus === 'failed'" class="status-failed">分析失败</span>
-                  <span v-else class="status-tip">模型分析中...</span>
                   <el-button
                     v-if="row.analysisStatus === 'failed'"
                     type="danger"
@@ -57,8 +55,19 @@
                   >
                     重新分析
                   </el-button>
+                  <span v-if="row.analysisStatus === 'failed'" class="status-failed">
+                    {{ failedAnalysisMessage }}
+                  </span>
+                  <span v-else class="status-tip">模型分析中...</span>
                 </template>
-                <el-button type="success" link @click="handleExportOne(row)">导出本次</el-button>
+                <el-button
+                  v-if="row.analysisReady"
+                  type="success"
+                  link
+                  @click="handleExportOne(row)"
+                >
+                  导出本次
+                </el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -141,7 +150,7 @@
             </el-option-group>
             <el-option-group
               v-if="exportOptions.exam.length"
-              label="试卷（科研诚信/思政）"
+              label="试卷（科研诚信 / 思政）"
             >
               <el-option
                 v-for="item in exportOptions.exam"
@@ -219,6 +228,8 @@ const query = ref({
   pageSize: 10
 })
 
+const failedAnalysisMessage = '额度耗尽，联系管理员@DYQ'
+
 const paperTypeById = computed(() => {
   const map = new Map()
   exportOptions.value.survey.forEach(item => map.set(item.id, item.paperType))
@@ -273,7 +284,7 @@ async function retryAnalysis(row) {
     ElMessage.success('已触发重新分析，请稍后刷新查看')
     loadList()
   } catch (error) {
-    const message = error?.response?.data?.detail || '重新分析失败，请稍后重试'
+    const message = error?.response?.data?.detail || failedAnalysisMessage
     ElMessage.error(message)
   }
 }
@@ -507,12 +518,11 @@ h1 {
 
 .status-tip {
   color: #999;
-  margin-right: 8px;
 }
 
 .status-failed {
   color: #f56c6c;
-  margin-right: 8px;
+  margin-left: 8px;
 }
 
 .batch-export-type-group {
