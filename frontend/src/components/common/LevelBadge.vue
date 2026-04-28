@@ -1,10 +1,16 @@
 <template>
   <div class="level-badge">
-    <span v-if="currentLevel.icon" class="level-icon">{{ currentLevel.icon }}</span>
-    <span class="level-text">
-      {{ currentLevel.label }}
-      <template v-if="currentLevel.count">x{{ currentLevel.count }}</template>
-    </span>
+    <template v-if="currentLevel.icons.length">
+      <span
+        v-for="(item, index) in currentLevel.icons"
+        :key="`${item.label}-${index}`"
+        class="level-icon"
+        :aria-label="item.label"
+      >
+        {{ item.icon }}
+      </span>
+    </template>
+    <span v-else class="level-text">{{ currentLevel.label }}</span>
   </div>
 </template>
 
@@ -27,12 +33,13 @@ const currentLevel = computed(() => parseLevel(props.levelValue))
   min-height: 36px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .level-icon {
   font-size: 22px;
+  line-height: 1;
 }
 
 .level-text {
