@@ -104,7 +104,12 @@ const homeData = ref({
 
 const radarScores = computed(() => {
   const list = homeData.value.scoreDimensions || []
-  if (!list.length) return []
+  if (!list.length) {
+    return [
+      { label: '提升后成绩', color: '#409eff' },
+      { label: '初始成绩', color: '#e6a23c' }
+    ]
+  }
 
   const hasWorst = list.some(item => item.worst !== undefined && item.worst !== null)
 
