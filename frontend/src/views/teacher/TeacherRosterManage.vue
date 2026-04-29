@@ -7,6 +7,8 @@
         <div class="toolbar-row">
           <el-button @click="goBack">上一级</el-button>
           <div class="right-actions">
+            <el-button plain @click="downloadTemplate">下载{{ activeTab === 'student' ? '学生' : '老师' }}模板</el-button>
+            <el-button plain @click="triggerImport">批量导入{{ activeTab === 'student' ? '学生' : '老师' }}</el-button>
             <el-button type="primary" @click="openCreateDialog('student')">新增学生名单</el-button>
             <el-button type="primary" plain @click="openCreateDialog('teacher')">新增老师名单</el-button>
           </div>
@@ -106,6 +108,21 @@
         <el-button type="primary" @click="submitDialog">保存</el-button>
       </template>
     </el-dialog>
+
+    <input
+      ref="studentImportInput"
+      type="file"
+      accept=".xlsx"
+      class="hidden-file-input"
+      @change="handleImportChange('student', $event)"
+    />
+    <input
+      ref="teacherImportInput"
+      type="file"
+      accept=".xlsx"
+      class="hidden-file-input"
+      @change="handleImportChange('teacher', $event)"
+    />
   </div>
 </template>
 
@@ -118,16 +135,23 @@ import {
   createTeacherRoster,
   deleteStudentRoster,
   deleteTeacherRoster,
+  downloadStudentRosterTemplate,
+  downloadTeacherRosterTemplate,
   getStudentRosterList,
   getTeacherRosterList,
+  importStudentRoster,
+  importTeacherRoster,
   updateStudentRoster,
   updateTeacherRoster
 } from '@/api/user'
+import { saveExcelBlob } from '@/utils/fileSave'
 
 const router = useRouter()
 const activeTab = ref('student')
 const studentRows = ref([])
 const teacherRows = ref([])
+const studentImportInput = ref(null)
+const teacherImportInput = ref(null)
 
 const dialogVisible = ref(false)
 const dialogMode = ref('create')
@@ -151,6 +175,68 @@ const dialogTitle = computed(() => {
 
 function goBack() {
   router.push('/teacher/home')
+}
+
+async function downloadTemplate() {
+  try {
+    if (activeTab.value === 'student') {
+      const blob = await downloadStudentRosterTemplate()
+      const result = await saveExcelBlob(blob, '学生预录入名单模板.xlsx')
+      if (result.canceled) return
+    } else {
+      const blob = await downloadTeacherRosterTemplate()
+      const result = await saveExcelBlob(blob, '老师预录入名单模板.xlsx')
+      if (result.canceled) return
+    }
+    ElMessage.success('模板下载成功')
+  } catch (error) {
+    const message = error?.response?.data?.detail || '模板下载失败，请稍后重试'
+    ElMessage.error(message)
+  }
+}
+
+function triggerImport() {
+  const targetInput = activeTab.value === 'student' ? studentImportInput.value : teacherImportInput.value
+  if (!targetInput) return
+  targetInput.value = ''
+  targetInput.click()
+}
+
+function buildImportSummary(title, result) {
+  const errors = Array.isArray(result?.errors) ? result.errors : []
+  const lines = [
+    `新增：${result?.createdCount || 0} 条`,
+    `更新：${result?.updatedCount || 0} 条`,
+    `跳过空行：${result?.skippedCount || 0} 条`,
+    `错误：${result?.errorCount || 0} 条`
+  ]
+  if (errors.length) {
+    lines.push('', '错误明细：', ...errors)
+  }
+  return ElMessageBox.alert(lines.join('\n'), title, {
+    confirmButtonText: '知道了'
+  })
+}
+
+async function handleImportChange(type, event) {
+  const input = event.target
+  const file = input?.files?.[0]
+  if (!file) return
+
+  try {
+    const response =
+      type === 'student'
+        ? await importStudentRoster(file)
+        : await importTeacherRoster(file)
+    ElMessage.success(response?.message || '批量导入成功')
+    await buildImportSummary(type === 'student' ? '学生名单导入结果' : '老师名单导入结果', response?.data || {})
+    await loadAll()
+  } catch (error) {
+    const message = error?.response?.data?.detail || '批量导入失败，请稍后重试'
+    ElMessage.error(message)
+  } finally {
+    if (input) input.value = ''
+  }
 }
 
 function resetForm() {
@@ -332,6 +418,10 @@ h1 {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.hidden-file-input {
+  display: none;
 }
 
 .tabs-wrap {

@@ -71,6 +71,27 @@ export function createStudentRoster(data) {
   })
 }
 
+export function downloadStudentRosterTemplate() {
+  return request({
+    url: '/teacher/roster/students/template',
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
+export function importStudentRoster(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: '/teacher/roster/students/import',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 export function updateStudentRoster(id, data) {
   return request({
     url: `/teacher/roster/students/${id}`,
@@ -98,6 +119,27 @@ export function createTeacherRoster(data) {
     url: '/teacher/roster/teachers',
     method: 'post',
     data
+  })
+}
+
+export function downloadTeacherRosterTemplate() {
+  return request({
+    url: '/teacher/roster/teachers/template',
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
+export function importTeacherRoster(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: '/teacher/roster/teachers/import',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
   })
 }
 

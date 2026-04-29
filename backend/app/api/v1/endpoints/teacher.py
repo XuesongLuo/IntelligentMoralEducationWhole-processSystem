@@ -1,7 +1,7 @@
 from datetime import datetime
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from sqlalchemy import func
@@ -106,6 +106,197 @@ class TeacherRosterUpsertRequest(BaseModel):
 class TeacherFilterExportRequest(BaseModel):
     accountScope: str
     paperIds: list[int]
+
+
+ROSTER_TEMPLATE_HEADERS = ["no", "real_name", "is_enabled"]
+
+
+def _build_roster_template_workbook(kind: str) -> Workbook:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "roster"
+    sheet.append(ROSTER_TEMPLATE_HEADERS)
+    if kind == "student":
+        sheet.append(["M202576312", "张三", True])
+    else:
+        sheet.append(["2020007", "李老师", True])
+    return workbook
+
+
+def _serialize_roster_row(row, kind: str, current_teacher_no: str | None = None) -> dict:
+    payload = {
+        "id": row.id,
+        "real_name": row.real_name,
+        "is_enabled": row.is_enabled,
+        "imported_at": format_datetime(row.imported_at),
+        "updated_at": format_datetime(row.updated_at),
+    }
+    if kind == "student":
+        payload["student_no"] = row.student_no
+    else:
+        payload["teacher_no"] = row.teacher_no
+        payload["is_current_user"] = bool(current_teacher_no and row.teacher_no == current_teacher_no)
+    return payload
+
+
+def _normalize_roster_cell(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
+def _parse_roster_enabled(value) -> bool:
+    if value is None or value == "":
+        return True
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "y", "启用", "是"}:
+        return True
+    if text in {"0", "false", "no", "n", "禁用", "否"}:
+        return False
+    raise ValueError("is_enabled must be true/false")
+
+
+def _read_roster_workbook(file_bytes: bytes):
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(filename=BytesIO(file_bytes), data_only=True)
+    sheet = workbook.active
+    rows = list(sheet.iter_rows(values_only=True))
+    if not rows:
+        raise HTTPException(status_code=400, detail="Excel 模板为空")
+    header = [_normalize_roster_cell(item) for item in rows[0]]
+    if header[: len(ROSTER_TEMPLATE_HEADERS)] != ROSTER_TEMPLATE_HEADERS:
+        raise HTTPException(status_code=400, detail="模板表头不正确，请先下载最新模板")
+    return rows[1:]
+
+
+def _import_student_roster_rows(db: Session, data_rows: list[tuple]) -> dict:
+    created = 0
+    updated = 0
+    skipped = 0
+    errors: list[str] = []
+    seen_nos: set[str] = set()
+
+    for index, row in enumerate(data_rows, start=2):
+        student_no = _normalize_roster_cell(row[0] if len(row) > 0 else "")
+        real_name = _normalize_roster_cell(row[1] if len(row) > 1 else "")
+        enabled_raw = row[2] if len(row) > 2 else True
+
+        if not student_no and not real_name and enabled_raw in (None, ""):
+            skipped += 1
+            continue
+        if not student_no or not real_name:
+            errors.append(f"第 {index} 行：学号和姓名不能为空")
+            continue
+        if student_no in seen_nos:
+            errors.append(f"第 {index} 行：学号 {student_no} 在文件中重复")
+            continue
+        seen_nos.add(student_no)
+
+        try:
+            is_enabled = _parse_roster_enabled(enabled_raw)
+        except ValueError:
+            errors.append(f"第 {index} 行：状态只能填写 true/false、1/0、启用/禁用")
+            continue
+
+        existing = db.query(StudentRoster).filter(StudentRoster.student_no == student_no).first()
+        if existing:
+            existing.real_name = real_name
+            existing.is_enabled = is_enabled
+            updated += 1
+        else:
+            db.add(
+                StudentRoster(
+                    student_no=student_no,
+                    real_name=real_name,
+                    is_enabled=is_enabled,
+                )
+            )
+            created += 1
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="导入失败，名单中存在重复学号")
+
+    return {
+        "createdCount": created,
+        "updatedCount": updated,
+        "skippedCount": skipped,
+        "errorCount": len(errors),
+        "errors": errors,
+    }
+
+
+def _import_teacher_roster_rows(
+    db: Session,
+    data_rows: list[tuple],
+    current_teacher_no: str | None,
+) -> dict:
+    created = 0
+    updated = 0
+    skipped = 0
+    errors: list[str] = []
+    seen_nos: set[str] = set()
+
+    for index, row in enumerate(data_rows, start=2):
+        teacher_no = _normalize_roster_cell(row[0] if len(row) > 0 else "")
+        real_name = _normalize_roster_cell(row[1] if len(row) > 1 else "")
+        enabled_raw = row[2] if len(row) > 2 else True
+
+        if not teacher_no and not real_name and enabled_raw in (None, ""):
+            skipped += 1
+            continue
+        if not teacher_no or not real_name:
+            errors.append(f"第 {index} 行：工号和姓名不能为空")
+            continue
+        if teacher_no in seen_nos:
+            errors.append(f"第 {index} 行：工号 {teacher_no} 在文件中重复")
+            continue
+        seen_nos.add(teacher_no)
+
+        try:
+            is_enabled = _parse_roster_enabled(enabled_raw)
+        except ValueError:
+            errors.append(f"第 {index} 行：状态只能填写 true/false、1/0、启用/禁用")
+            continue
+
+        existing = db.query(TeacherRoster).filter(TeacherRoster.teacher_no == teacher_no).first()
+        if existing:
+            if current_teacher_no and existing.teacher_no == current_teacher_no:
+                errors.append(f"第 {index} 行：不允许通过批量导入修改当前登录老师 {teacher_no}")
+                continue
+            existing.real_name = real_name
+            existing.is_enabled = is_enabled
+            updated += 1
+        else:
+            db.add(
+                TeacherRoster(
+                    teacher_no=teacher_no,
+                    real_name=real_name,
+                    is_enabled=is_enabled,
+                )
+            )
+            created += 1
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="导入失败，名单中存在重复工号")
+
+    return {
+        "createdCount": created,
+        "updatedCount": updated,
+        "skippedCount": skipped,
+        "errorCount": len(errors),
+        "errors": errors,
+    }
 
 
 DIMENSION_CONFIG = [
@@ -807,6 +998,42 @@ def get_student_roster_list(
     )
 
 
+@router.get("/roster/students/template")
+def download_student_roster_template(
+    current_user: AuthUser = Depends(get_current_user),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can access roster")
+
+    workbook = _build_roster_template_workbook("student")
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    filename = "student_roster_template.xlsx"
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/roster/students/import", response_model=ResponseModel)
+async def import_student_roster(
+    file: UploadFile = File(...),
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage roster")
+    if not file.filename or not file.filename.lower().endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="请上传 .xlsx 格式的 Excel 文件")
+
+    file_bytes = await file.read()
+    data_rows = _read_roster_workbook(file_bytes)
+    result = _import_student_roster_rows(db, data_rows)
+    return ResponseModel(data=result, message="学生名单批量导入完成")
+
+
 @router.post("/roster/students", response_model=ResponseModel)
 def create_student_roster(
     payload: StudentRosterUpsertRequest,
@@ -937,21 +1164,54 @@ def get_teacher_roster_list(
     )
     return ResponseModel(
         data=[
-            {
-                "id": row.id,
-                "teacher_no": row.teacher_no,
-                "real_name": row.real_name,
-                "is_enabled": row.is_enabled,
-                "is_current_user": bool(
-                    current_user.teacher_profile
-                    and row.teacher_no == current_user.teacher_profile.teacher_no
-                ),
-                "imported_at": format_datetime(row.imported_at),
-                "updated_at": format_datetime(row.updated_at),
-            }
+            _serialize_roster_row(
+                row,
+                "teacher",
+                current_user.teacher_profile.teacher_no if current_user.teacher_profile else None,
+            )
             for row in rows
         ]
     )
+
+
+@router.get("/roster/teachers/template")
+def download_teacher_roster_template(
+    current_user: AuthUser = Depends(get_current_user),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can access roster")
+
+    workbook = _build_roster_template_workbook("teacher")
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    filename = "teacher_roster_template.xlsx"
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/roster/teachers/import", response_model=ResponseModel)
+async def import_teacher_roster(
+    file: UploadFile = File(...),
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="only teachers can manage roster")
+    if not file.filename or not file.filename.lower().endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="请上传 .xlsx 格式的 Excel 文件")
+
+    file_bytes = await file.read()
+    data_rows = _read_roster_workbook(file_bytes)
+    result = _import_teacher_roster_rows(
+        db,
+        data_rows,
+        current_user.teacher_profile.teacher_no if current_user.teacher_profile else None,
+    )
+    return ResponseModel(data=result, message="教师名单批量导入完成")
 
 
 @router.post("/roster/teachers", response_model=ResponseModel)
@@ -963,13 +1223,12 @@ def create_teacher_roster(
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="only teachers can manage roster")
 
-    if current_user.teacher_profile and row.teacher_no == current_user.teacher_profile.teacher_no:
-        raise HTTPException(status_code=403, detail="current teacher cannot modify own roster entry")
-
     teacher_no = payload.teacher_no.strip()
     real_name = payload.real_name.strip()
     if not teacher_no or not real_name:
         raise HTTPException(status_code=400, detail="工号和姓名不能为空")
+    if current_user.teacher_profile and teacher_no == current_user.teacher_profile.teacher_no:
+        raise HTTPException(status_code=403, detail="current teacher cannot modify own roster entry")
 
     existing = db.query(TeacherRoster).filter(TeacherRoster.teacher_no == teacher_no).first()
     if existing:
