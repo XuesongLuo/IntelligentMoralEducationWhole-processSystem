@@ -10,7 +10,13 @@
         {{ item.icon }}
       </span>
     </template>
-    <span v-else class="level-text">{{ currentLevel.label }}</span>
+    <span
+      v-else
+      class="level-icon level-icon--placeholder"
+      aria-hidden="true"
+    >
+      ☆
+    </span>
   </div>
 </template>
 
@@ -42,9 +48,7 @@ const currentLevel = computed(() => parseLevel(props.levelValue))
   line-height: 1;
 }
 
-.level-text {
-  font-size: 16px;
-  color: #1f3f6d;
-  font-weight: 600;
+.level-icon--placeholder {
+  opacity: 0.16;
 }
 </style>
