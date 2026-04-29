@@ -16,9 +16,20 @@ const props = defineProps({
 
 const chartRef = ref(null)
 let chartInstance = null
+const EMPTY_INDICATORS = [
+  '科研诚信脆弱型',
+  '医患沟通焦虑型',
+  '职业认同模糊型',
+  '人文关怀缺失型',
+  '综合发展均衡型'
+]
+const hasScoreDimensions = computed(() => (props.scoreDimensions || []).length > 0)
 
 const radarIndicators = computed(() => {
-  return (props.scoreDimensions|| []).map(item => ({
+  const source = hasScoreDimensions.value
+    ? props.scoreDimensions
+    : EMPTY_INDICATORS.map(name => ({ name }))
+  return source.map(item => ({
     name: item.name,
     max: 100
   }))
@@ -52,17 +63,14 @@ const hasWorst = computed(() => {
 
 function renderChart() {
   if (!chartRef.value) return
-  if (!radarIndicators.value.length) {
-    chartInstance?.clear()
-    return
-  }
 
   if (!chartInstance) {
     chartInstance = echarts.init(chartRef.value)
   }
 
-  const seriesData = [
-    {
+  const seriesData = []
+  if (hasScoreDimensions.value) {
+    seriesData.push({
       value: bestScoreValues.value,
       name: '最好成绩',
       areaStyle: {
@@ -76,10 +84,10 @@ function renderChart() {
         color: '#409eff'
       },
       symbolSize: 6
-    }
-  ]
+    })
+  }
 
-  if (hasWorst.value) {
+  if (hasScoreDimensions.value && hasWorst.value) {
     seriesData.push({
       value: worstScoreValues.value,
       name: '最低成绩',
@@ -99,7 +107,8 @@ function renderChart() {
 
   chartInstance.setOption({
     tooltip: {
-      trigger: 'item'
+      trigger: 'item',
+      show: hasScoreDimensions.value
     },
     legend: {
       show: false
