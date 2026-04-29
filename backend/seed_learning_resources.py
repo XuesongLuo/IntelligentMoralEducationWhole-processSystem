@@ -5,7 +5,7 @@ python seed_learning_resources.py
 
 from app.core.database import SessionLocal
 from app.data.learning_resources import REAL_RESOURCE_DATA
-from seed_demo_data import seed_categories, seed_resources
+from seed_learning_resources_core import seed_categories, seed_resources
 
 
 def main() -> None:
